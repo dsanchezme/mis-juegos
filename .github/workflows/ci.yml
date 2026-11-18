@@ -93,8 +93,15 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Verify registry signatures
         run: npm audit signatures
-      - name: Review dependencies added in this PR
-        if: github.event_name == 'pull_request'
+
+  dependency-review:
+    name: Dependency review
+    # Needs "Dependency graph" enabled in Settings → Security (Advanced Security).
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Block PRs that add vulnerable dependencies
         uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
         with:
           fail-on-severity: high
