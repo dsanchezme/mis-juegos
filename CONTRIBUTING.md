@@ -61,8 +61,8 @@ These are one-time settings in GitHub that make the workflow enforceable:
 
 - **Settings → Rules → Rulesets → New branch ruleset** targeting `main`:
   - Require a pull request before merging (0 approvals is fine for a solo project).
-  - Require status checks to pass: `Lint, types, unit tests and build`, `End-to-end tests`, `Dependency audit`, `Analyze (javascript-typescript)`, `Analyze (actions)`.
+  - Require status checks to pass: `Lint, types, unit tests and build`, `End-to-end tests`, `Dependency audit`, `Dependency review`, `Analyze (javascript-typescript)`, `Analyze (actions)`.
   - Block force pushes. Restrict deletions.
 - **Settings → General → Pull Requests**: allow squash merging only, and enable "Automatically delete head branches".
 - **Settings → Pages → Source**: GitHub Actions.
-- **Settings → Security**: enable Dependabot alerts, Dependabot security updates, secret scanning and push protection (all free for public repos).
+- **Settings → Security** (Advanced Security): enable the dependency graph (required by the `Dependency review` check), Dependabot alerts, Dependabot security updates, secret scanning and push protection (all free for public repos).
