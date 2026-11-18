@@ -102,7 +102,7 @@ export const en: Texts = {
     names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`,
 
   ambicioso: {
-    name: "Ambicioso",
+    name: "Greed",
     tagline: "Dice · 2+ players",
 
     newGame: "New game",
@@ -123,7 +123,7 @@ export const en: Texts = {
     start: "Start",
 
     resumeTitle: "You have a game in progress",
-    startedAgo: (ago: string) => `Ambicioso · started ${ago}`,
+    startedAgo: (ago: string) => `Greed · started ${ago}`,
     minutesAgo: (n: number) => `${n} min ago`,
     hoursAgo: (n: number) => `${n} h ago`,
     daysAgo: (n: number) => `${n} days ago`,
@@ -219,7 +219,7 @@ export const en: Texts = {
     historyDetail: (exact: boolean, target: string, finished: boolean, rounds: number) =>
       `${exact ? "exact target" : "target"} ${target} · ${finished ? `${rounds} rounds` : `round ${rounds}`}`,
 
-    rulesTitle: "How to play Ambicioso",
+    rulesTitle: "How to play Greed",
     rulesList: [
       "Roll 4 dice. Each 1 is worth 100 and each 5 is worth 50.",
       "Three of a kind is worth the number × 100 (three 4s = 400). Three 1s are worth 1,000.",

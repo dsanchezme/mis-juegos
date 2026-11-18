@@ -9,7 +9,7 @@ A hub of digital board games played on a single phone, tablet or computer. It is
 
 ## Games
 
-- **Ambicioso**: dice, 2+ players. Roll 4 dice; ones and fives score, and so do three and four of a kind. If no die scores it's a _sancocho_ (a bust) and you lose everything you built up that turn.
+- **Ambicioso** (_Greed_ in English): dice, 2+ players. Roll 4 dice; ones and fives score, and so do three and four of a kind. If no die scores it's a _sancocho_ (a bust) and you lose everything you built up that turn.
 
 ## Getting started
 
@@ -39,21 +39,21 @@ The first time you run e2e tests locally, install the browser with `npx playwrig
 
 ```
 src/
-  central/            hub screens: games, history, players, settings
-  motor/              shared engine: game contract, seeded randomness, storage
+  hub/                hub screens: games, history, players, settings
+  engine/             shared engine: game contract, seeded randomness, storage and its migrations
   ui/                 dice, styles, sound and haptics, shake to roll, who goes first
   i18n/               Spanish and English texts, and the language hook
-  juegos/
-    catalogo.ts       list of games shown in the hub
+  games/
+    catalog.ts        list of games shown in the hub
     ambicioso/
-      reglas/         pure game logic and its unit tests
-      pantallas/      game UI
+      rules/          pure game logic and its unit tests
+      screens/        game UI
 e2e/                  end-to-end tests (Playwright)
 ```
 
-Each game exposes its rules as a pure function, `aplicar(estado, accion)`. Rules are tested without any UI and, later on, online mode can run the very same rules on a server.
+Each game exposes its rules as a pure function, `apply(state, action)`. Rules are tested without any UI and, later on, online mode can run the very same rules on a server.
 
-To add a game, create `src/juegos/<id>/` with `reglas/` and `pantallas/`, add its texts to both language files, and register it in `src/juegos/catalogo.ts`.
+To add a game, create `src/games/<id>/` with `rules/` and `screens/`, add its texts to both language files, and register it in `src/games/catalog.ts`.
 
 ## Languages
 
@@ -63,7 +63,8 @@ All user-facing text lives in `src/i18n/es.ts` and `src/i18n/en.ts`; components 
 - `en.ts` is typed against `es.ts`, so a missing or misspelled key fails the type check.
 - Translations are written to read naturally, not word for word. English uses the usual dice-game terms: _bank_ (plantarse), _bust_ (sancocho), _hot dice_ (mano llena).
 - Rules return data, not sentences (for example, the scoring parts of a roll), and the UI turns that data into text in the current language. Keep it that way so saved games and history display correctly after a language change.
-- Code identifiers are in Spanish; comments and documentation are in English.
+- All code is in English: identifiers, file names, comments, tests and documentation. Only the Spanish UI copy in `es.ts` is in Spanish. Game ids such as `ambicioso` stay as they are because saved data uses them.
+- Saved data lives in `localStorage` under the `mis-juegos:` prefix. If you rename a stored key or field, add a step to `src/engine/migrate.ts` so players keep their history.
 
 ## Quality and delivery
 

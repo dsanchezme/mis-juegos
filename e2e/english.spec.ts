@@ -11,7 +11,7 @@ test("switching to English translates the hub and the game", async ({ page }) =>
   await page.getByRole("navigation", { name: "Sections" }).getByRole("button", { name: "Games" }).click();
   await expect(page.getByRole("heading", { name: "My Games" })).toBeVisible();
 
-  await page.getByRole("button", { name: /Ambicioso/ }).click();
+  await page.getByRole("button", { name: /Greed/ }).click();
   await expect(page.getByRole("heading", { name: "New game" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Reach or pass it" })).toBeVisible();
 });
