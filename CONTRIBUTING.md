@@ -27,12 +27,12 @@ They are a fast local safety net; CI is the source of truth. If you ever need to
 
 Beyond what the linter enforces:
 
-- **Keep game rules pure.** Anything under `reglas/` must not touch React, the DOM, storage or `Math.random`. Randomness comes in through a seed so every game is reproducible in tests.
-- **UI reads state, rules change it.** Screens dispatch actions to `aplicar(estado, accion)`; they don't compute scores themselves.
+- **Keep game rules pure.** Anything under `rules/` must not touch React, the DOM, storage or `Math.random`. Randomness comes in through a seed so every game is reproducible in tests.
+- **UI reads state, rules change it.** Screens dispatch actions to `apply(state, action)`; they don't compute scores themselves.
 - **Small functions with intention-revealing names.** Prefer a well-named helper over a comment explaining a block.
 - **No non-null assertions (`!`).** Handle the missing case explicitly.
 - **Buttons are `<button type="button">`.** Interactive elements must be real buttons or links so they work with a keyboard and screen readers.
-- **Game code and identifiers are in Spanish** (the domain language of the games); repository documentation is in English.
+- **Everything in the repository is in English**: identifiers, file names, comments, test names, commits and PRs. Spanish appears only as UI copy in `src/i18n/es.ts`.
 
 ## Tests
 
@@ -40,13 +40,13 @@ Beyond what the linter enforces:
 | ------------- | ---------------------- | --------------------- | ---------------------------------------------------------------------------- |
 | Unit          | Vitest                 | `src/**/*.test.ts(x)` | Game rules, scoring, engine helpers. Fast, many, exhaustive on edge cases.   |
 | End-to-end    | Playwright (Pixel 7)   | `e2e/*.spec.ts`       | A few critical journeys on the production build: start a game, roll, resume. |
-| Accessibility | axe-core in Playwright | `e2e/central.spec.ts` | No serious or critical WCAG violations on key screens.                       |
+| Accessibility | axe-core in Playwright | `e2e/hub.spec.ts`     | No serious or critical WCAG violations on key screens.                       |
 
 Rules:
 
 - **Every bug fix starts with a failing test** that reproduces it.
 - **Every new rule gets a unit test** before or alongside the code.
-- Coverage of `reglas/` and `motor/` must stay at or above the thresholds in `vitest.config.ts` (90% lines, functions and statements; 85% branches). CI fails below that.
+- Coverage of `rules/` and `engine/` must stay at or above the thresholds in `vitest.config.ts` (90% lines, functions and statements; 85% branches). CI fails below that.
 - E2E tests fail on any browser console error, and `Math.random` is seeded so runs are reproducible. Select elements by role and accessible name, not CSS classes.
 
 ## Dependencies

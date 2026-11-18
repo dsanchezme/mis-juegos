@@ -4,10 +4,10 @@ test("start a game, roll, and resume it after reloading", async ({ page }) => {
   await page.goto("./#ambicioso");
   await expect(page.getByRole("heading", { name: "Nueva partida" })).toBeVisible();
 
-  const nuevo = page.getByPlaceholder("Agregar a alguien nuevo");
-  for (const nombre of ["Ana", "Beto"]) {
-    await nuevo.fill(nombre);
-    await nuevo.press("Enter");
+  const newPlayer = page.getByPlaceholder("Agregar a alguien nuevo");
+  for (const name of ["Ana", "Beto"]) {
+    await newPlayer.fill(name);
+    await newPlayer.press("Enter");
   }
   await page.getByRole("button", { name: "Orden de la lista" }).click();
   await page.getByRole("button", { name: "Empezar", exact: true }).click();
@@ -16,7 +16,7 @@ test("start a game, roll, and resume it after reloading", async ({ page }) => {
   await page.getByRole("button", { name: "Estoy listo" }).click();
   await page.getByRole("button", { name: /toca aquí para lanzar/ }).click();
 
-  // Either some dice scored (you can stand) or none did (sancocho).
+  // Either some dice scored (you can stand) or none did (bust).
   await expect(page.getByRole("button", { name: /Plantarme|Siguiente|Pasar/ }).first()).toBeVisible({
     timeout: 10_000,
   });

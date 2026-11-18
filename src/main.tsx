@@ -6,16 +6,18 @@ import "@fontsource/figtree/600.css";
 import "@fontsource/figtree/700.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "@fontsource/jetbrains-mono/700.css";
-import "./ui/estilos.css";
+import "./ui/styles.css";
 import { registerSW } from "virtual:pwa-register";
 import { App } from "./App";
+import { migrateStorage } from "./engine/migrate";
 
 registerSW({ immediate: true });
+migrateStorage();
 
-const raiz = document.getElementById("root");
-if (!raiz) throw new Error("Falta el elemento #root en index.html");
+const root = document.getElementById("root");
+if (!root) throw new Error("Missing #root element in index.html");
 
-createRoot(raiz).render(
+createRoot(root).render(
   <StrictMode>
     <App />
   </StrictMode>,

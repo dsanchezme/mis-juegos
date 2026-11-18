@@ -1,4 +1,4 @@
-import type { ScoringPart } from "../juegos/ambicioso/reglas/puntuar";
+import type { ScoringPart } from "../games/ambicioso/rules/score";
 
 /** Spanish texts. `en.ts` must provide the same keys (enforced by the `Texts` type). */
 export const es = {

@@ -1,36 +1,36 @@
 import { useEffect, useState } from "react";
-import { Central } from "./central/Central";
-import { CATALOGO } from "./juegos/catalogo";
-import { desbloquearAudio } from "./ui/efectos";
+import { CATALOG } from "./games/catalog";
+import { Hub } from "./hub/Hub";
+import { unlockAudio } from "./ui/effects";
 
-const juegoDesdeHash = () => {
+const gameFromHash = () => {
   const id = location.hash.replace(/^#\/?/, "");
-  return CATALOGO.some((j) => j.id === id) ? id : null;
+  return CATALOG.some((j) => j.id === id) ? id : null;
 };
 
 export function App() {
-  const [juego, setJuego] = useState<string | null>(juegoDesdeHash);
+  const [game, setGame] = useState<string | null>(gameFromHash);
 
   useEffect(() => {
-    const alCambiar = () => setJuego(juegoDesdeHash());
-    window.addEventListener("hashchange", alCambiar);
-    const desbloquear = () => desbloquearAudio();
-    window.addEventListener("pointerdown", desbloquear, { once: true });
+    const handleChange = () => setGame(gameFromHash());
+    window.addEventListener("hashchange", handleChange);
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock, { once: true });
     return () => {
-      window.removeEventListener("hashchange", alCambiar);
-      window.removeEventListener("pointerdown", desbloquear);
+      window.removeEventListener("hashchange", handleChange);
+      window.removeEventListener("pointerdown", unlock);
     };
   }, []);
 
-  const abrir = (id: string) => {
+  const open = (id: string) => {
     location.hash = id;
   };
-  const salir = () => {
+  const exit = () => {
     history.replaceState(null, "", location.pathname + location.search);
-    setJuego(null);
+    setGame(null);
   };
 
-  const entrada = CATALOGO.find((j) => j.id === juego);
-  if (entrada) return <entrada.Componente salir={salir} />;
-  return <Central abrir={abrir} />;
+  const entry = CATALOG.find((j) => j.id === game);
+  if (entry) return <entry.Component exit={exit} />;
+  return <Hub open={open} />;
 }

@@ -9,8 +9,8 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html", "json-summary"],
       // Pure logic (rules and engine) must be covered; screens are tested end to end.
-      include: ["src/juegos/*/reglas/**", "src/motor/**"],
-      exclude: ["**/*.test.*", "src/motor/tipos.ts"],
+      include: ["src/games/*/rules/**", "src/engine/**"],
+      exclude: ["**/*.test.*", "src/engine/types.ts"],
       thresholds: { lines: 90, functions: 90, branches: 85, statements: 90 },
     },
   },
