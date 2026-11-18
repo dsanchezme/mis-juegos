@@ -61,10 +61,7 @@ export interface EstadoAmbicioso {
 
 export type AccionAmbicioso =
   /** `caras` solo se usa en pruebas para forzar un resultado. */
-  | { tipo: "LANZAR"; caras?: number[] }
-  | { tipo: "PLANTARSE" }
-  | { tipo: "PASAR_TURNO" }
-  | { tipo: "TERMINAR" };
+  { tipo: "LANZAR"; caras?: number[] } | { tipo: "PLANTARSE" } | { tipo: "PASAR_TURNO" } | { tipo: "TERMINAR" };
 
 export const DADOS = 4;
 
@@ -147,7 +144,13 @@ export function aplicar(e: EstadoAmbicioso, accion: AccionAmbicioso): EstadoAmbi
       const usados = p.sirven.filter(Boolean).length;
       const manoLlena = p.puntos > 0 && usados === n;
       const lanzamiento: Lanzamiento = { caras, sirven: p.sirven, puntos: p.puntos, partes: p.partes, manoLlena };
-      const base = { ...e, semilla, apartados, ultimoLanzamiento: lanzamiento, numeroLanzamiento: e.numeroLanzamiento + 1 };
+      const base = {
+        ...e,
+        semilla,
+        apartados,
+        ultimoLanzamiento: lanzamiento,
+        numeroLanzamiento: e.numeroLanzamiento + 1,
+      };
 
       const nuevoAcumulado = e.acumulado + p.puntos;
       const sePaso = e.config.modoMeta === "exacta" && jugador.puntos + nuevoAcumulado > e.config.meta;
@@ -188,7 +191,10 @@ export function aplicar(e: EstadoAmbicioso, accion: AccionAmbicioso): EstadoAmbi
           turnos: j.turnos + 1,
           mejorTurno: Math.max(j.mejorTurno, e.acumulado),
         })),
-        historial: [...e.historial, { ronda: e.ronda, jugadorId: jugador.id, tipo: "planto", puntos: e.acumulado, total }],
+        historial: [
+          ...e.historial,
+          { ronda: e.ronda, jugadorId: jugador.id, tipo: "planto", puntos: e.acumulado, total },
+        ],
         ultimaRonda: e.ultimaRonda || llego,
         quienLlego: e.quienLlego ?? (llego ? jugador.id : null),
       };

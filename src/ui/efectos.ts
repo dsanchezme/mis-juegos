@@ -7,7 +7,8 @@ function audio(): AudioContext | null {
   if (!leerAjustes().sonido) return null;
   try {
     if (!ctx) {
-      const A = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const A =
+        window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!A) return null;
       ctx = new A();
     }
@@ -41,7 +42,7 @@ function golpe(t0: number, vol = 0.9) {
   const largo = Math.floor(a.sampleRate * 0.06);
   const b = a.createBuffer(1, largo, a.sampleRate);
   const d = b.getChannelData(0);
-  for (let i = 0; i < largo; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / largo, 3);
+  for (let i = 0; i < largo; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / largo) ** 3;
   const s = a.createBufferSource();
   const f = a.createBiquadFilter();
   const g = a.createGain();
@@ -78,10 +79,10 @@ export const efectos = {
     vibrar(Array.from({ length: n * 2 - 1 }, (_, i) => (i % 2 ? 50 : 20)));
   },
   suman(n: number) {
-    for (let i = 0; i < n; i++) tono(880 * Math.pow(1.122, i), 0.35 + i * 0.12, 0.25, "triangle");
+    for (let i = 0; i < n; i++) tono(880 * 1.122 ** i, 0.35 + i * 0.12, 0.25, "triangle");
   },
   manoLlena() {
-    [523, 659, 784, 1047].forEach((f, i) => tono(f, 0.4 + i * 0.09, 0.35, "triangle", 0.2));
+    for (const [i, f] of [523, 659, 784, 1047].entries()) tono(f, 0.4 + i * 0.09, 0.35, "triangle", 0.2);
     setTimeout(() => vibrar([40, 60, 40]), 400);
   },
   sancocho() {
@@ -92,7 +93,7 @@ export const efectos = {
     setTimeout(() => vibrar(400), 300);
   },
   plantarse() {
-    [0, 0.06, 0.13].forEach((t) => tono(1400 + Math.random() * 400, t, 0.12, "triangle", 0.15));
+    for (const t of [0, 0.06, 0.13]) tono(1400 + Math.random() * 400, t, 0.12, "triangle", 0.15);
     vibrar(60);
   },
   ultimaRonda() {
@@ -101,7 +102,15 @@ export const efectos = {
     vibrar([80, 80, 80, 80, 80]);
   },
   ganador() {
-    [[523, 0], [659, 0.12], [784, 0.24], [1047, 0.36], [784, 0.6], [1047, 0.72]].forEach(([f, t]) => tono(f, t, 0.4, "square", 0.07));
+    const notas = [
+      [523, 0],
+      [659, 0.12],
+      [784, 0.24],
+      [1047, 0.36],
+      [784, 0.6],
+      [1047, 0.72],
+    ];
+    for (const [f, t] of notas) tono(f, t, 0.4, "square", 0.07);
     vibrar([80, 60, 80, 60, 200]);
   },
   tic() {

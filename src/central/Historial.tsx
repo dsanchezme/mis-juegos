@@ -16,14 +16,14 @@ export function Historial() {
   const [abierta, setAbierta] = useState<string | null>(null);
 
   const victorias = new Map<string, { nombre: string; n: number }>();
-  historial.forEach((h) =>
-    h.ganadores.forEach((id) => {
+  for (const h of historial) {
+    for (const id of h.ganadores) {
       const j = h.jugadores.find((x) => x.id === id);
-      if (!j) return;
+      if (!j) continue;
       const v = victorias.get(id) ?? { nombre: j.nombre, n: 0 };
       victorias.set(id, { nombre: j.nombre, n: v.n + 1 });
-    }),
-  );
+    }
+  }
   const ranking = [...victorias.values()].sort((a, b) => b.n - a.n);
 
   return (
@@ -32,7 +32,9 @@ export function Historial() {
       {ranking.length > 0 && (
         <div className="chips">
           {ranking.map((r, i) => (
-            <span key={r.nombre + i} className={`pildora ${i === 0 ? "oro" : ""}`}>{r.nombre} · {r.n} {r.n === 1 ? "victoria" : "victorias"}</span>
+            <span key={r.nombre + i} className={`pildora ${i === 0 ? "oro" : ""}`}>
+              {r.nombre} · {r.n} {r.n === 1 ? "victoria" : "victorias"}
+            </span>
           ))}
         </div>
       )}
@@ -42,26 +44,48 @@ export function Historial() {
           const ganadores = h.jugadores.filter((j) => h.ganadores.includes(j.id));
           const juego = CATALOGO.find((c) => c.id === h.juego)?.nombre ?? h.juego;
           const titulo =
-            ganadores.length === 0 ? "Terminada sin ganador" : ganadores.length === 1 ? `${ganadores[0].nombre} ganó` : `Empate: ${ganadores.map((g) => g.nombre).join(" y ")}`;
+            ganadores.length === 0
+              ? "Terminada sin ganador"
+              : ganadores.length === 1
+                ? `${ganadores[0].nombre} ganó`
+                : `Empate: ${ganadores.map((g) => g.nombre).join(" y ")}`;
           return (
-            <button key={h.id} className="tarjeta btn" style={{ display: "flex", flexDirection: "column", alignItems: "stretch", fontWeight: 500, opacity: ganadores.length ? 1 : 0.6, textAlign: "left" }} onClick={() => setAbierta(abierta === h.id ? null : h.id)} aria-expanded={abierta === h.id}>
+            <button
+              type="button"
+              key={h.id}
+              className="tarjeta btn"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "stretch",
+                fontWeight: 500,
+                opacity: ganadores.length ? 1 : 0.6,
+                textAlign: "left",
+              }}
+              onClick={() => setAbierta(abierta === h.id ? null : h.id)}
+              aria-expanded={abierta === h.id}
+            >
               <span className="fila">
                 {ganadores[0] && <span className="punto" style={{ background: ganadores[0].color }} />}
                 <b className="grow">{titulo}</b>
-                <span className="mono" style={{ fontSize: 13 }}>{ganadores[0] ? fmt(ganadores[0].puntos) : "—"}</span>
+                <span className="mono" style={{ fontSize: 13 }}>
+                  {ganadores[0] ? fmt(ganadores[0].puntos) : "—"}
+                </span>
               </span>
               <span className="dim" style={{ fontSize: 12 }}>
                 {fecha(h.fecha)} · {juego} · {h.jugadores.map((j) => j.nombre).join(", ")} · {h.detalle}
               </span>
               {abierta === h.id && (
                 <span className="columna" style={{ marginTop: 8, gap: 4 }}>
-                  {[...h.jugadores].sort((a, b) => b.puntos - a.puntos).map((j) => (
-                    <span key={j.id} className="fila" style={{ fontSize: 14 }}>
-                      <span className="punto" style={{ background: j.color }} />
-                      <span className="grow">{j.nombre}</span>
-                      <span className="mono">{fmt(j.puntos)}</span>
-                    </span>
-                  ))}
+                  {[...h.jugadores]
+                    .sort((a, b) => b.puntos - a.puntos)
+                    .map((j) => (
+                      <span key={j.id} className="fila" style={{ fontSize: 14 }}>
+                        <span className="punto" style={{ background: j.color }} />
+                        <span className="grow">{j.nombre}</span>
+                        <span className="mono">{fmt(j.puntos)}</span>
+                      </span>
+                    ))}
                 </span>
               )}
             </button>

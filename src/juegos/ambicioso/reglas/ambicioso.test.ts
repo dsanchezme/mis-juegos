@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { aplicar, iniciar, type AccionAmbicioso, type ConfigAmbicioso, type EstadoAmbicioso } from "./ambicioso";
+import {
+  type AccionAmbicioso,
+  ambicioso,
+  aplicar,
+  type ConfigAmbicioso,
+  type EstadoAmbicioso,
+  faltante,
+  iniciar,
+  necesitaParaGanar,
+} from "./ambicioso";
 
 const personas = [
   { id: "ana", nombre: "Ana", color: "#f4b942" },
@@ -56,9 +65,12 @@ describe("turno", () => {
   it("la ronda avanza cuando vuelve al primer jugador", () => {
     const e = jugar(
       nueva(),
-      tirar([2, 3, 4, 6]), { tipo: "PASAR_TURNO" },
-      tirar([2, 3, 4, 6]), { tipo: "PASAR_TURNO" },
-      tirar([2, 3, 4, 6]), { tipo: "PASAR_TURNO" },
+      tirar([2, 3, 4, 6]),
+      { tipo: "PASAR_TURNO" },
+      tirar([2, 3, 4, 6]),
+      { tipo: "PASAR_TURNO" },
+      tirar([2, 3, 4, 6]),
+      { tipo: "PASAR_TURNO" },
     );
     expect(e.ronda).toBe(2);
     expect(e.turnoDe).toBe(0);
@@ -115,5 +127,49 @@ describe("final de partida", () => {
     const b = jugar(nueva(), { tipo: "LANZAR" });
     expect(a.ultimoLanzamiento?.caras).toEqual(b.ultimoLanzamiento?.caras);
     expect(a.ultimoLanzamiento?.caras.every((c) => c >= 1 && c <= 6)).toBe(true);
+  });
+});
+
+describe("acciones fuera de lugar", () => {
+  it("pasar el turno solo vale después de perder", () => {
+    const e = nueva();
+    expect(aplicar(e, { tipo: "PASAR_TURNO" })).toBe(e);
+  });
+
+  it("después de un sancocho, pasar el turno le da el turno al siguiente", () => {
+    const e = jugar(nueva(), tirar([2, 3, 4, 6]), { tipo: "PASAR_TURNO" });
+    expect(e.turnoDe).toBe(1);
+    expect(e.fase).toBe("cambioDeTurno");
+  });
+
+  it("no se puede lanzar con la partida terminada", () => {
+    const e = jugar(nueva(), { tipo: "TERMINAR" });
+    expect(e.fase).toBe("terminada");
+    expect(e.ganadores).toEqual([]);
+    expect(aplicar(e, tirar([1, 1, 1, 1]))).toBe(e);
+  });
+});
+
+describe("ayudas de marcador", () => {
+  it("faltante: lo que le falta a cada jugador para la meta, nunca negativo", () => {
+    const e = jugar(nueva(), tirar([1, 5, 3, 2]), { tipo: "PLANTARSE" });
+    expect(faltante(e, 0)).toBe(850);
+    expect(faltante(e)).toBe(1000);
+    const pasado = { ...e, jugadores: e.jugadores.map((j) => ({ ...j, puntos: 1500 })) };
+    expect(faltante(pasado)).toBe(0);
+  });
+
+  it("necesitaParaGanar: superar al líder, o llegar justo en meta exacta", () => {
+    const e = jugar(nueva(), tirar([1, 5, 3, 2]), { tipo: "PLANTARSE" });
+    expect(necesitaParaGanar(e)).toBe(151);
+    expect(necesitaParaGanar(e, 0)).toBe(1);
+    const exacta = { ...e, config: { meta: 1000, modoMeta: "exacta" as const } };
+    expect(necesitaParaGanar(exacta, 0)).toBe(850);
+  });
+
+  it("la definición del juego expone iniciar y aplicar", () => {
+    expect(ambicioso.id).toBe("ambicioso");
+    expect(ambicioso.jugadores.min).toBe(2);
+    expect(ambicioso.aplicar(ambicioso.iniciar(personas, config, 1), { tipo: "TERMINAR" }).fase).toBe("terminada");
   });
 });

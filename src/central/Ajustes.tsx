@@ -11,14 +11,27 @@ export const NOMBRES_INICIO: Record<ModoInicio, string> = {
   lista: "Orden de la lista",
 };
 
-export function Interruptor(props: { id: string; titulo: string; detalle?: string; valor: boolean; cambiar: (v: boolean) => void }) {
+export function Interruptor(props: {
+  id: string;
+  titulo: string;
+  detalle?: string;
+  valor: boolean;
+  cambiar: (v: boolean) => void;
+}) {
   return (
     <label className="interruptor" htmlFor={props.id}>
       <span className="t">
         <b>{props.titulo}</b>
         {props.detalle && <small>{props.detalle}</small>}
       </span>
-      <input id={props.id} type="checkbox" role="switch" checked={props.valor} onChange={(e) => props.cambiar(e.target.checked)} />
+      <input
+        id={props.id}
+        type="checkbox"
+        role="switch"
+        aria-checked={props.valor}
+        checked={props.valor}
+        onChange={(e) => props.cambiar(e.target.checked)}
+      />
     </label>
   );
 }
@@ -29,11 +42,19 @@ export function AjustesEfectos() {
   return (
     <div className="columna">
       <Interruptor id="aj-sonido" titulo="Sonido" valor={a.sonido} cambiar={(v) => setA({ ...a, sonido: v })} />
-      <Interruptor id="aj-vibracion" titulo="Vibración" detalle={puedeVibrar ? undefined : "Este equipo no permite vibrar"} valor={a.vibracion} cambiar={(v) => setA({ ...a, vibracion: v })} />
+      <Interruptor
+        id="aj-vibracion"
+        titulo="Vibración"
+        detalle={puedeVibrar ? undefined : "Este equipo no permite vibrar"}
+        valor={a.vibracion}
+        cambiar={(v) => setA({ ...a, vibracion: v })}
+      />
       <Interruptor
         id="aj-agitar"
         titulo="Agitar para lanzar"
-        detalle={agitarDisponible() ? "Siempre puedes tocar el botón para lanzar" : "Este equipo no tiene sensor de movimiento"}
+        detalle={
+          agitarDisponible() ? "Siempre puedes tocar el botón para lanzar" : "Este equipo no tiene sensor de movimiento"
+        }
         valor={a.agitar}
         cambiar={async (v) => {
           if (v && necesitaPermiso() && !(await pedirPermisoMovimiento())) return;
@@ -54,7 +75,12 @@ export function Ajustes() {
       <span className="lbl">Quién empieza, por defecto</span>
       <div className="chips">
         {(Object.keys(NOMBRES_INICIO) as ModoInicio[]).map((m) => (
-          <button key={m} className={`chip ${a.modoInicio === m ? "on" : ""}`} onClick={() => setA({ ...a, modoInicio: m })}>
+          <button
+            type="button"
+            key={m}
+            className={`chip ${a.modoInicio === m ? "on" : ""}`}
+            onClick={() => setA({ ...a, modoInicio: m })}
+          >
             {NOMBRES_INICIO[m]}
           </button>
         ))}
@@ -63,16 +89,33 @@ export function Ajustes() {
       {confirmar ? (
         <div className="tarjeta columna">
           <b>¿Borrar todo el historial de partidas?</b>
-          <span className="dim" style={{ fontSize: 14 }}>No se puede deshacer. Los jugadores se conservan.</span>
+          <span className="dim" style={{ fontSize: 14 }}>
+            No se puede deshacer. Los jugadores se conservan.
+          </span>
           <div className="fila">
-            <button className="btn borde chico grow" onClick={() => setConfirmar(false)}>Cancelar</button>
-            <button className="btn peligro chico grow" onClick={() => { escribir("historial", []); setConfirmar(false); }}>Borrar</button>
+            <button type="button" className="btn borde chico grow" onClick={() => setConfirmar(false)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn peligro chico grow"
+              onClick={() => {
+                escribir("historial", []);
+                setConfirmar(false);
+              }}
+            >
+              Borrar
+            </button>
           </div>
         </div>
       ) : (
-        <button className="btn peligro-borde chico" onClick={() => setConfirmar(true)}>Borrar historial</button>
+        <button type="button" className="btn peligro-borde chico" onClick={() => setConfirmar(true)}>
+          Borrar historial
+        </button>
       )}
-      <p className="dim" style={{ fontSize: 12, margin: 0, textAlign: "center" }}>Todo se guarda solo en este teléfono.</p>
+      <p className="dim" style={{ fontSize: 12, margin: 0, textAlign: "center" }}>
+        Todo se guarda solo en este teléfono.
+      </p>
     </>
   );
 }

@@ -1,40 +1,66 @@
 # Mis juegos
 
-Central de juegos de mesa digitales para jugar en un solo teléfono, tablet o computador. Es una web instalable (PWA): abre en cualquier navegador, se instala como app y funciona sin internet.
+[![CI](https://github.com/dsanchezme/mis-juegos/actions/workflows/ci.yml/badge.svg)](https://github.com/dsanchezme/mis-juegos/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/dsanchezme/mis-juegos/actions/workflows/codeql.yml/badge.svg)](https://github.com/dsanchezme/mis-juegos/actions/workflows/codeql.yml)
 
-## Juegos
+A hub of digital board games played on a single phone, tablet or computer. It is an installable web app (PWA): it opens in any browser, installs like an app and works offline.
 
-- **Ambicioso**: dados, 2 o más jugadores. Se lanzan 4 dados; los 1 y los 5 suman, los tríos y pókeres también. Si ningún dado sirve es *sancocho* y se pierde lo acumulado en el turno.
+**Play it:** https://dsanchezme.github.io/mis-juegos/
 
-## Desarrollo
+## Games
+
+- **Ambicioso**: dice, 2+ players. Roll 4 dice; ones and fives score, and so do three and four of a kind. If no die scores it's a _sancocho_ and you lose everything you built up that turn.
+
+## Getting started
+
+Requires Node.js 22 (see `.nvmrc`).
 
 ```bash
-npm install
-npm run dev      # http://localhost:5173/mis-juegos/
-npm test         # pruebas de las reglas
-npm run build    # genera dist/
+npm install          # also installs the git hooks
+npm run dev          # http://localhost:5173/mis-juegos/
 ```
 
-## Estructura
+| Command                 | What it does                                                |
+| ----------------------- | ----------------------------------------------------------- |
+| `npm run dev`           | Dev server with hot reload                                  |
+| `npm test`              | Unit tests (Vitest)                                         |
+| `npm run test:watch`    | Unit tests in watch mode                                    |
+| `npm run test:coverage` | Unit tests with coverage report in `coverage/`              |
+| `npm run test:e2e`      | End-to-end tests (Playwright) against the production build  |
+| `npm run lint`          | Lint and format check (Biome)                               |
+| `npm run lint:fix`      | Apply safe lint fixes and format                            |
+| `npm run typecheck`     | TypeScript type check                                       |
+| `npm run check`         | Everything CI checks except e2e: run it before opening a PR |
+| `npm run build`         | Production build in `dist/`                                 |
+
+The first time you run e2e tests locally, install the browser with `npx playwright install chromium`.
+
+## Project structure
 
 ```
 src/
-  central/            pantallas de la central: juegos, historial, jugadores, ajustes
-  motor/              piezas comunes: contrato de juegos, azar con semilla, guardado
-  ui/                 dados, estilos, sonidos y vibración, agitar, quién empieza
+  central/            hub screens: games, history, players, settings
+  motor/              shared engine: game contract, seeded randomness, storage
+  ui/                 dice, styles, sound and haptics, shake to roll, who goes first
   juegos/
-    catalogo.ts       lista de juegos de la central
+    catalogo.ts       list of games shown in the hub
     ambicioso/
-      reglas/         lógica pura del juego y sus pruebas
-      pantallas/      interfaz del juego
+      reglas/         pure game logic and its unit tests
+      pantallas/      game UI
+e2e/                  end-to-end tests (Playwright)
 ```
 
-Cada juego expone sus reglas como una función pura `aplicar(estado, accion)`. Así se prueban sin interfaz y, más adelante, el modo en línea podrá usar las mismas reglas en un servidor.
+Each game exposes its rules as a pure function, `aplicar(estado, accion)`. Rules are tested without any UI and, later on, online mode can run the very same rules on a server.
 
-Para agregar un juego: crea `src/juegos/<id>/` con `reglas/` y `pantallas/`, y agrégalo a `src/juegos/catalogo.ts`.
+To add a game, create `src/juegos/<id>/` with `reglas/` and `pantallas/`, and register it in `src/juegos/catalogo.ts`.
 
-## Publicación
+## Quality and delivery
 
-Cada merge a `main` publica la web en GitHub Pages con la Action `publicar.yml`. La primera vez hay que activar Pages en *Settings → Pages → Source: GitHub Actions*.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow. In short:
 
-Todo se guarda en el teléfono (partidas, jugadores, historial). No hay servidor ni base de datos, así que no tiene costo.
+- Every change goes through a pull request. CI must be green before merging.
+- **CI** (`.github/workflows/ci.yml`) runs lint, type check, unit tests with a coverage threshold, the production build, end-to-end tests on a mobile viewport (including an accessibility scan), and a dependency audit.
+- **CD**: every merge to `main` re-runs CI and, only if every job passes, deploys to GitHub Pages.
+- **Security**: CodeQL code scanning, Dependabot updates, dependency review on PRs, actions pinned to commit SHAs, and least-privilege workflow permissions. See [SECURITY.md](SECURITY.md).
+
+Everything is stored on the device (games, players, history). There is no server or database, so hosting is free.

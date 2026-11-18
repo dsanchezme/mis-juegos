@@ -14,19 +14,29 @@ export function Jugadores() {
     setNombre("");
   };
   const cambiarColor = (id: string) =>
-    setPersonas((ps) => ps.map((p) => (p.id === id ? { ...p, color: COLORES[(COLORES.indexOf(p.color) + 1) % COLORES.length] } : p)));
-  const renombrar = (id: string, n: string) => setPersonas((ps) => ps.map((p) => (p.id === id ? { ...p, nombre: n } : p)));
+    setPersonas((ps) =>
+      ps.map((p) => (p.id === id ? { ...p, color: COLORES[(COLORES.indexOf(p.color) + 1) % COLORES.length] } : p)),
+    );
+  const renombrar = (id: string, n: string) =>
+    setPersonas((ps) => ps.map((p) => (p.id === id ? { ...p, nombre: n } : p)));
 
   return (
     <>
       <h1 className="titulo">Jugadores</h1>
       <p className="dim" style={{ margin: 0 }}>
-        Las personas con las que has jugado, para no escribir el nombre cada vez. Al crear una partida eliges quién juega hoy.
+        Las personas con las que has jugado, para no escribir el nombre cada vez. Al crear una partida eliges quién
+        juega hoy.
       </p>
       <div className="columna">
         {personas.map((p) => (
           <div key={p.id} className="persona">
-            <button className="muestra" style={{ background: p.color }} onClick={() => cambiarColor(p.id)} aria-label={`Cambiar color de ${p.nombre}`} />
+            <button
+              type="button"
+              className="muestra"
+              style={{ background: p.color }}
+              onClick={() => cambiarColor(p.id)}
+              aria-label={`Cambiar color de ${p.nombre}`}
+            />
             <input
               className="nombre campo"
               style={{ border: "none", padding: "4px 0", background: "transparent" }}
@@ -36,19 +46,54 @@ export function Jugadores() {
               aria-label="Nombre"
               id={`nombre-${p.id}`}
             />
-            <span className="mono dim" style={{ fontSize: 12 }}>{partidas(p.id)} {partidas(p.id) === 1 ? "partida" : "partidas"}</span>
+            <span className="mono dim" style={{ fontSize: 12 }}>
+              {partidas(p.id)} {partidas(p.id) === 1 ? "partida" : "partidas"}
+            </span>
             {borrando === p.id ? (
-              <button className="btn peligro chico" onClick={() => { setPersonas((ps) => ps.filter((x) => x.id !== p.id)); setBorrando(null); }}>Quitar</button>
+              <button
+                type="button"
+                className="btn peligro chico"
+                onClick={() => {
+                  setPersonas((ps) => ps.filter((x) => x.id !== p.id));
+                  setBorrando(null);
+                }}
+              >
+                Quitar
+              </button>
             ) : (
-              <button className="boton-icono" onClick={() => setBorrando(p.id)} aria-label={`Quitar a ${p.nombre}`}>✕</button>
+              <button
+                type="button"
+                className="boton-icono"
+                onClick={() => setBorrando(p.id)}
+                aria-label={`Quitar a ${p.nombre}`}
+              >
+                ✕
+              </button>
             )}
           </div>
         ))}
-        {personas.length === 0 && <div className="tarjeta dim">Todavía no hay jugadores. Agrega el primero aquí o al crear una partida.</div>}
+        {personas.length === 0 && (
+          <div className="tarjeta dim">Todavía no hay jugadores. Agrega el primero aquí o al crear una partida.</div>
+        )}
       </div>
-      <form className="fila" onSubmit={(e) => { e.preventDefault(); agregar(); }}>
-        <input id="nuevo-jugador" className="campo" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={20} />
-        <button className="btn sec chico" type="submit" disabled={!nombre.trim()}>Agregar</button>
+      <form
+        className="fila"
+        onSubmit={(e) => {
+          e.preventDefault();
+          agregar();
+        }}
+      >
+        <input
+          id="nuevo-jugador"
+          className="campo"
+          placeholder="Nombre"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          maxLength={20}
+        />
+        <button className="btn sec chico" type="submit" disabled={!nombre.trim()}>
+          Agregar
+        </button>
       </form>
     </>
   );

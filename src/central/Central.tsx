@@ -31,8 +31,16 @@ export function Central({ abrir }: { abrir: (id: string) => void }) {
       <nav className="nav" aria-label="Secciones">
         <div>
           {PESTANAS.map((p) => (
-            <button key={p.id} className={pestana === p.id ? "on" : ""} onClick={() => setPestana(p.id)} aria-current={pestana === p.id}>
-              <span className="ic" aria-hidden="true">{p.icono}</span>
+            <button
+              type="button"
+              key={p.id}
+              className={pestana === p.id ? "on" : ""}
+              onClick={() => setPestana(p.id)}
+              aria-current={pestana === p.id}
+            >
+              <span className="ic" aria-hidden="true">
+                {p.icono}
+              </span>
               {p.nombre}
             </button>
           ))}
@@ -63,10 +71,20 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
       </div>
 
       {pendientes.map(({ j, resumen }) => (
-        <button key={j.id} className="tarjeta oro btn" style={{ justifyContent: "space-between", textAlign: "left", fontWeight: 500 }} onClick={() => abrir(j.id)}>
+        <button
+          type="button"
+          key={j.id}
+          className="tarjeta oro btn"
+          style={{ justifyContent: "space-between", textAlign: "left", fontWeight: 500 }}
+          onClick={() => abrir(j.id)}
+        >
           <span className="columna" style={{ gap: 2 }}>
-            <span className="lbl" style={{ color: "var(--gold)" }}>Continuar</span>
-            <span>{j.nombre} · {resumen}</span>
+            <span className="lbl" style={{ color: "var(--gold)" }}>
+              Continuar
+            </span>
+            <span>
+              {j.nombre} · {resumen}
+            </span>
           </span>
           <b style={{ color: "var(--gold)" }}>Seguir ›</b>
         </button>
@@ -75,13 +93,17 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
       <span className="lbl">Juegos</span>
       <div className="juegos">
         {CATALOGO.map((j) => (
-          <button key={j.id} className="tarjeta-juego" onClick={() => abrir(j.id)}>
+          <button type="button" key={j.id} className="tarjeta-juego" onClick={() => abrir(j.id)}>
             <span className="fila" style={{ gap: 4 }}>
-              {j.caras.map((c, i) => <Dado key={i} cara={c} tamano={26} />)}
+              {j.caras.map((c, i) => (
+                <Dado key={i} cara={c} tamano={26} />
+              ))}
             </span>
             <span className="grow" />
             <b>{j.nombre}</b>
-            <span className="dim" style={{ fontSize: 13 }}>{j.descripcion}</span>
+            <span className="dim" style={{ fontSize: 13 }}>
+              {j.descripcion}
+            </span>
           </button>
         ))}
         {Array.from({ length: Math.max(1, 3 - (CATALOGO.length - 1)) }, (_, i) => (
@@ -96,8 +118,19 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
       {instalar && (
         <div className="tarjeta columna">
           <b>Instalar Mis juegos</b>
-          <span className="dim" style={{ fontSize: 14 }}>Queda como app en tu teléfono y funciona sin internet.</span>
-          <button className="btn sec chico" onClick={() => { void instalar.prompt(); setInstalar(null); }}>Instalar</button>
+          <span className="dim" style={{ fontSize: 14 }}>
+            Queda como app en tu teléfono y funciona sin internet.
+          </span>
+          <button
+            type="button"
+            className="btn sec chico"
+            onClick={() => {
+              void instalar.prompt();
+              setInstalar(null);
+            }}
+          >
+            Instalar
+          </button>
         </div>
       )}
     </>

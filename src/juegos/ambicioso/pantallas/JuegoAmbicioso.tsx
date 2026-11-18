@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { escribir, leer, nuevoId } from "../../../motor/almacen";
-import { fmt, guardarEnHistorial } from "../../../motor/central";
 import { semillaNueva } from "../../../motor/azar";
+import { fmt, guardarEnHistorial } from "../../../motor/central";
 import type { Persona } from "../../../motor/tipos";
 import { QuienEmpieza } from "../../../ui/QuienEmpieza";
 import { type EstadoAmbicioso, iniciar } from "../reglas/ambicioso";
@@ -17,7 +17,8 @@ interface Registro {
   estado: EstadoAmbicioso;
 }
 
-const enCurso = (r: Registro | null): r is Registro => !!r && r.estado.fase !== "ganador" && r.estado.fase !== "terminada";
+const enCurso = (r: Registro | null): r is Registro =>
+  !!r && r.estado.fase !== "ganador" && r.estado.fase !== "terminada";
 
 export function resumenPartidaAmbicioso(): string | null {
   const r = leer<Registro | null>(CLAVE, null);
@@ -53,7 +54,12 @@ export function JuegoAmbicioso({ salir }: { salir: () => void }) {
 
   const comenzar = (prep: Preparacion, inicial: number) => {
     const personas = rotar(prep.personas.map(aPersona), inicial);
-    guardar({ id: nuevoId(), inicio: new Date().toISOString(), preparacion: prep, estado: iniciar(personas, prep.config, semillaNueva()) });
+    guardar({
+      id: nuevoId(),
+      inicio: new Date().toISOString(),
+      preparacion: prep,
+      estado: iniciar(personas, prep.config, semillaNueva()),
+    });
     setPaso({ t: "partida" });
   };
 
@@ -80,10 +86,24 @@ export function JuegoAmbicioso({ salir }: { salir: () => void }) {
   };
 
   if (paso.t === "retomar" && enCurso(registro)) {
-    return <Retomar r={registro} seguir={() => setPaso({ t: "partida" })} nueva={() => setPaso({ t: "nueva" })} salir={salir} />;
+    return (
+      <Retomar
+        r={registro}
+        seguir={() => setPaso({ t: "partida" })}
+        nueva={() => setPaso({ t: "nueva" })}
+        salir={salir}
+      />
+    );
   }
   if (paso.t === "quien") {
-    return <QuienEmpieza personas={paso.prep.personas} modo={paso.prep.modoInicio} alElegir={(i) => comenzar(paso.prep, i)} volver={() => setPaso({ t: "nueva" })} />;
+    return (
+      <QuienEmpieza
+        personas={paso.prep.personas}
+        modo={paso.prep.modoInicio}
+        alElegir={(i) => comenzar(paso.prep, i)}
+        volver={() => setPaso({ t: "nueva" })}
+      />
+    );
   }
   if (paso.t === "partida" && registro) {
     return (
@@ -109,25 +129,46 @@ export function JuegoAmbicioso({ salir }: { salir: () => void }) {
   );
 }
 
-function Retomar({ r, seguir, nueva, salir }: { r: Registro; seguir: () => void; nueva: () => void; salir: () => void }) {
+function Retomar({
+  r,
+  seguir,
+  nueva,
+  salir,
+}: {
+  r: Registro;
+  seguir: () => void;
+  nueva: () => void;
+  salir: () => void;
+}) {
   const [confirmar, setConfirmar] = useState(false);
   const e = r.estado;
   const j = e.jugadores[e.turnoDe];
   const hace = Math.round((Date.now() - new Date(r.inicio).getTime()) / 60000);
-  const cuando = hace < 60 ? `hace ${Math.max(1, hace)} min` : hace < 1440 ? `hace ${Math.round(hace / 60)} h` : `hace ${Math.round(hace / 1440)} días`;
+  const cuando =
+    hace < 60
+      ? `hace ${Math.max(1, hace)} min`
+      : hace < 1440
+        ? `hace ${Math.round(hace / 60)} h`
+        : `hace ${Math.round(hace / 1440)} días`;
   return (
     <div className="pantalla">
-      <div className="barra"><button className="enlace" onClick={salir}>‹ Mis juegos</button></div>
+      <div className="barra">
+        <button type="button" className="enlace" onClick={salir}>
+          ‹ Mis juegos
+        </button>
+      </div>
       <h1 className="titulo">Tienes una partida a medias</h1>
       <div className="tarjeta columna">
         <span className="lbl">Ambicioso · empezó {cuando}</span>
-        {[...e.jugadores].sort((a, b) => b.puntos - a.puntos).map((x) => (
-          <div key={x.id} className="fila">
-            <span className="punto" style={{ background: x.color }} />
-            <span className="grow">{x.nombre}</span>
-            <b className="mono">{fmt(x.puntos)}</b>
-          </div>
-        ))}
+        {[...e.jugadores]
+          .sort((a, b) => b.puntos - a.puntos)
+          .map((x) => (
+            <div key={x.id} className="fila">
+              <span className="punto" style={{ background: x.color }} />
+              <span className="grow">{x.nombre}</span>
+              <b className="mono">{fmt(x.puntos)}</b>
+            </div>
+          ))}
         <span className="dim" style={{ fontSize: 13 }}>
           Le toca a {j.nombre}
           {e.fase === "lanzado" ? `, lleva ${fmt(e.acumulado)} en el turno` : ""}
@@ -136,17 +177,25 @@ function Retomar({ r, seguir, nueva, salir }: { r: Registro; seguir: () => void;
       </div>
       <span className="grow" />
       <div className="columna">
-        <button className="btn pri" onClick={seguir}>Retomar</button>
+        <button type="button" className="btn pri" onClick={seguir}>
+          Retomar
+        </button>
         {confirmar ? (
           <div className="tarjeta columna">
             <b>¿Empezar otra? La partida a medias se descarta al empezar la nueva.</b>
             <div className="fila">
-              <button className="btn borde chico grow" onClick={() => setConfirmar(false)}>Cancelar</button>
-              <button className="btn peligro chico grow" onClick={nueva}>Sí, empezar otra</button>
+              <button type="button" className="btn borde chico grow" onClick={() => setConfirmar(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="btn peligro chico grow" onClick={nueva}>
+                Sí, empezar otra
+              </button>
             </div>
           </div>
         ) : (
-          <button className="btn borde" onClick={() => setConfirmar(true)}>Empezar una nueva</button>
+          <button type="button" className="btn borde" onClick={() => setConfirmar(true)}>
+            Empezar una nueva
+          </button>
         )}
       </div>
     </div>

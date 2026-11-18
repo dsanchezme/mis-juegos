@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { ModoInicio } from "../motor/central";
+import { leerAjustes } from "../motor/central";
 import type { Persona } from "../motor/tipos";
 import { useAgitar } from "./agitar";
 import { Dado } from "./Dado";
 import { efectos } from "./efectos";
-import { leerAjustes } from "../motor/central";
 
 interface Props {
   personas: Persona[];
@@ -17,7 +17,9 @@ export function QuienEmpieza(props: Props) {
   return (
     <div className="pantalla">
       <div className="barra">
-        <button className="enlace" onClick={props.volver}>‹ Atrás</button>
+        <button type="button" className="enlace" onClick={props.volver}>
+          ‹ Atrás
+        </button>
         <span>¿Quién empieza?</span>
         <span style={{ width: 50 }} />
       </div>
@@ -38,14 +40,27 @@ function Resultado({ persona, continuar }: { persona: Persona; continuar: () => 
         <h2>{persona.nombre}</h2>
       </div>
       <span className="grow" />
-      <button className="btn pri" onClick={continuar}>Empezar la partida</button>
+      <button type="button" className="btn pri" onClick={continuar}>
+        Empezar la partida
+      </button>
     </>
   );
 }
 
 /* ---------- Dedos en la pantalla ---------- */
 
-const COLORES_DEDOS = ["#f4b942", "#4cc9f0", "#f27aa7", "#7fdc97", "#c3a6ff", "#ff9f68", "#5ee0d0", "#e4e4e4", "#ffd1dc", "#9ad1ff"];
+const COLORES_DEDOS = [
+  "#f4b942",
+  "#4cc9f0",
+  "#f27aa7",
+  "#7fdc97",
+  "#c3a6ff",
+  "#ff9f68",
+  "#5ee0d0",
+  "#e4e4e4",
+  "#ffd1dc",
+  "#9ad1ff",
+];
 
 function Dedos({ personas, alElegir }: Props) {
   const zona = useRef<HTMLDivElement>(null);
@@ -88,8 +103,8 @@ function Dedos({ personas, alElegir }: Props) {
   }, [n, ganador]);
 
   const pos = (e: React.PointerEvent) => {
-    const r = zona.current!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
+    const r = zona.current?.getBoundingClientRect();
+    return { x: e.clientX - (r?.left ?? 0), y: e.clientY - (r?.top ?? 0) };
   };
   const esRaton = (e: React.PointerEvent) => e.pointerType === "mouse";
 
@@ -98,7 +113,11 @@ function Dedos({ personas, alElegir }: Props) {
     e.preventDefault();
     const id = esRaton(e) ? Date.now() : e.pointerId;
     if (!esRaton(e)) {
-      try { zona.current?.setPointerCapture(e.pointerId); } catch { /* sin captura */ }
+      try {
+        zona.current?.setPointerCapture(e.pointerId);
+      } catch {
+        /* sin captura */
+      }
     }
     const color = COLORES_DEDOS[colorSiguiente.current++ % COLORES_DEDOS.length];
     setDedos((d) => ({ ...d, [id]: { ...pos(e), color } }));
@@ -120,10 +139,20 @@ function Dedos({ personas, alElegir }: Props) {
     setGanador(null);
   };
 
-  const mensaje = ganador !== null ? "¡Ese dedo empieza!" : n === 0 ? "Todos pongan un dedo aquí" : n === 1 ? "Falta al menos otro dedo" : cuenta === null ? "Quietos…" : "";
+  const mensaje =
+    ganador !== null
+      ? "¡Ese dedo empieza!"
+      : n === 0
+        ? "Todos pongan un dedo aquí"
+        : n === 1
+          ? "Falta al menos otro dedo"
+          : cuenta === null
+            ? "Quietos…"
+            : "";
 
   return (
     <>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: zona multitáctil; hay alternativas accesibles con botones (ruleta, dados, azar, lista). */}
       <div
         ref={zona}
         className="zona-dedos"
@@ -148,13 +177,15 @@ function Dedos({ personas, alElegir }: Props) {
           <b>¿De quién es el dedo?</b>
           <div className="chips" style={{ justifyContent: "center" }}>
             {personas.map((p, i) => (
-              <button key={p.id} className="chip" onClick={() => alElegir(i)}>
+              <button type="button" key={p.id} className="chip" onClick={() => alElegir(i)}>
                 <span className="punto" style={{ background: p.color }} />
                 {p.nombre}
               </button>
             ))}
           </div>
-          <button className="enlace" onClick={reiniciar}>Repetir</button>
+          <button type="button" className="enlace" onClick={reiniciar}>
+            Repetir
+          </button>
         </div>
       ) : (
         <p className="dim centro" style={{ margin: 0, textAlign: "center", fontSize: 14 }}>
@@ -206,23 +237,35 @@ function Ruleta({ personas, alElegir }: Props) {
         <div className="ruleta-aguja" />
         <div
           className="ruleta"
-          style={{ background: fondo, transform: `rotate(${giro}deg)`, transition: girando ? "transform 4.2s cubic-bezier(.12,.8,.2,1)" : "none" }}
+          style={{
+            background: fondo,
+            transform: `rotate(${giro}deg)`,
+            transition: girando ? "transform 4.2s cubic-bezier(.12,.8,.2,1)" : "none",
+          }}
         />
         <div className="ruleta-centro">{elegido !== null ? personas[elegido].nombre : "?"}</div>
       </div>
       <div className="chips" style={{ justifyContent: "center" }}>
         {personas.map((p) => (
-          <span key={p.id} className="chip" style={{ background: p.color, color: "#14182a", cursor: "default" }}>{p.nombre}</span>
+          <span key={p.id} className="chip" style={{ background: p.color, color: "#14182a", cursor: "default" }}>
+            {p.nombre}
+          </span>
         ))}
       </div>
       <span className="grow" />
       {elegido !== null ? (
         <div className="columna">
-          <button className="btn pri" onClick={() => alElegir(elegido)}>Empieza {personas[elegido].nombre}</button>
-          <button className="btn borde" onClick={girar}>Girar otra vez</button>
+          <button type="button" className="btn pri" onClick={() => alElegir(elegido)}>
+            Empieza {personas[elegido].nombre}
+          </button>
+          <button type="button" className="btn borde" onClick={girar}>
+            Girar otra vez
+          </button>
         </div>
       ) : (
-        <button className="btn pri" onClick={girar} disabled={girando}>{girando ? "Girando…" : "Girar"}</button>
+        <button type="button" className="btn pri" onClick={girar} disabled={girando}>
+          {girando ? "Girando…" : "Girar"}
+        </button>
       )}
     </>
   );
@@ -262,12 +305,18 @@ function Duelo({ personas, alElegir }: Props) {
   return (
     <>
       <h1 className="titulo">Duelo de dados</h1>
-      <p className="dim" style={{ margin: 0 }}>Cada uno lanza un dado. El más alto empieza.</p>
+      <p className="dim" style={{ margin: 0 }}>
+        Cada uno lanza un dado. El más alto empieza.
+      </p>
       <div className="columna duelo">
         {personas.map((p, i) => {
           const fuera = !candidatos.includes(i);
           return (
-            <div key={p.id} className="persona" style={{ opacity: fuera ? 0.35 : 1, outline: i === turno ? `2px solid ${p.color}` : "none" }}>
+            <div
+              key={p.id}
+              className="persona"
+              style={{ opacity: fuera ? 0.35 : 1, outline: i === turno ? `2px solid ${p.color}` : "none" }}
+            >
               <span className="punto" style={{ background: p.color }} />
               <span className="nombre">{p.nombre}</span>
               {i === turno && rodando ? (
@@ -275,7 +324,9 @@ function Duelo({ personas, alElegir }: Props) {
               ) : tiradas[i] !== undefined ? (
                 <Dado cara={tiradas[i]} tamano={34} estado={ganadores.includes(i) ? "suma" : "normal"} />
               ) : (
-                <span className="dim" style={{ fontSize: 13 }}>{fuera ? "" : "…"}</span>
+                <span className="dim" style={{ fontSize: 13 }}>
+                  {fuera ? "" : "…"}
+                </span>
               )}
             </div>
           );
@@ -289,17 +340,17 @@ function Duelo({ personas, alElegir }: Props) {
       )}
       <span className="grow" />
       {!terminado && (
-        <button className="btn pri" onClick={lanzar} disabled={rodando}>
+        <button type="button" className="btn pri" onClick={lanzar} disabled={rodando}>
           {personas[turno].nombre}, {leerAjustes().agitar ? "agita o toca para lanzar" : "toca para lanzar"}
         </button>
       )}
       {terminado && ganadores.length > 1 && (
-        <button className="btn pri" onClick={desempatar}>
+        <button type="button" className="btn pri" onClick={desempatar}>
           Empate: desempatan {ganadores.map((i) => personas[i].nombre).join(" y ")}
         </button>
       )}
       {terminado && ganadores.length === 1 && (
-        <button className="btn pri" onClick={() => alElegir(ganadores[0])}>
+        <button type="button" className="btn pri" onClick={() => alElegir(ganadores[0])}>
           Empieza {personas[ganadores[0]].nombre}
         </button>
       )}
