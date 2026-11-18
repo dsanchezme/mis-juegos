@@ -5,6 +5,7 @@ import { useAgitar } from "./agitar";
 import { Dado } from "./Dado";
 import { efectos } from "./efectos";
 import { leerAjustes } from "../motor/central";
+import { useT } from "../i18n";
 
 interface Props {
   personas: Persona[];
@@ -13,12 +14,14 @@ interface Props {
   volver: () => void;
 }
 
+/** Screen to pick who goes first. Shared by every game. */
 export function QuienEmpieza(props: Props) {
+  const t = useT();
   return (
     <div className="pantalla">
       <div className="barra">
-        <button className="enlace" onClick={props.volver}>‹ Atrás</button>
-        <span>¿Quién empieza?</span>
+        <button className="enlace" onClick={props.volver}>{t.common.back}</button>
+        <span>{t.whoStarts.title}</span>
         <span style={{ width: 50 }} />
       </div>
       {props.modo === "dedos" && <Dedos {...props} />}
@@ -30,24 +33,26 @@ export function QuienEmpieza(props: Props) {
 }
 
 function Resultado({ persona, continuar }: { persona: Persona; continuar: () => void }) {
+  const t = useT();
   return (
     <>
       <div className="relevo" style={{ ["--c" as string]: persona.color }}>
         <span className="punto" style={{ background: persona.color, width: 20, height: 20 }} />
-        <span className="lbl">Empieza</span>
+        <span className="lbl">{t.whoStarts.starts}</span>
         <h2>{persona.nombre}</h2>
       </div>
       <span className="grow" />
-      <button className="btn pri" onClick={continuar}>Empezar la partida</button>
+      <button className="btn pri" onClick={continuar}>{t.whoStarts.startGame}</button>
     </>
   );
 }
 
-/* ---------- Dedos en la pantalla ---------- */
+/* ---------- Fingers on the screen ---------- */
 
 const COLORES_DEDOS = ["#f4b942", "#4cc9f0", "#f27aa7", "#7fdc97", "#c3a6ff", "#ff9f68", "#5ee0d0", "#e4e4e4", "#ffd1dc", "#9ad1ff"];
 
 function Dedos({ personas, alElegir }: Props) {
+  const t = useT();
   const zona = useRef<HTMLDivElement>(null);
   const [dedos, setDedos] = useState<Record<number, { x: number; y: number; color: string }>>({});
   const [cuenta, setCuenta] = useState<number | null>(null);
@@ -57,7 +62,7 @@ function Dedos({ personas, alElegir }: Props) {
   dedosRef.current = dedos;
   const n = Object.keys(dedos).length;
 
-  // Cuando hay 2+ dedos quietos: espera, cuenta 3-2-1 y elige.
+  // With 2+ fingers held still: wait, count down 3-2-1 and pick one.
   useEffect(() => {
     if (ganador !== null) return;
     setCuenta(null);
@@ -98,7 +103,7 @@ function Dedos({ personas, alElegir }: Props) {
     e.preventDefault();
     const id = esRaton(e) ? Date.now() : e.pointerId;
     if (!esRaton(e)) {
-      try { zona.current?.setPointerCapture(e.pointerId); } catch { /* sin captura */ }
+      try { zona.current?.setPointerCapture(e.pointerId); } catch { /* capture not available */ }
     }
     const color = COLORES_DEDOS[colorSiguiente.current++ % COLORES_DEDOS.length];
     setDedos((d) => ({ ...d, [id]: { ...pos(e), color } }));
@@ -120,7 +125,8 @@ function Dedos({ personas, alElegir }: Props) {
     setGanador(null);
   };
 
-  const mensaje = ganador !== null ? "¡Ese dedo empieza!" : n === 0 ? "Todos pongan un dedo aquí" : n === 1 ? "Falta al menos otro dedo" : cuenta === null ? "Quietos…" : "";
+  const mensaje =
+    ganador !== null ? t.whoStarts.fingersPicked : n === 0 ? t.whoStarts.fingersPlace : n === 1 ? t.whoStarts.fingersOneMore : cuenta === null ? t.whoStarts.fingersHold : "";
 
   return (
     <>
@@ -145,7 +151,7 @@ function Dedos({ personas, alElegir }: Props) {
       </div>
       {ganador !== null ? (
         <div className="columna centro">
-          <b>¿De quién es el dedo?</b>
+          <b>{t.whoStarts.whoseFinger}</b>
           <div className="chips" style={{ justifyContent: "center" }}>
             {personas.map((p, i) => (
               <button key={p.id} className="chip" onClick={() => alElegir(i)}>
@@ -154,20 +160,21 @@ function Dedos({ personas, alElegir }: Props) {
               </button>
             ))}
           </div>
-          <button className="enlace" onClick={reiniciar}>Repetir</button>
+          <button className="enlace" onClick={reiniciar}>{t.whoStarts.again}</button>
         </div>
       ) : (
         <p className="dim centro" style={{ margin: 0, textAlign: "center", fontSize: 14 }}>
-          Cuando haya 2 o más dedos quietos, cuenta 3, 2, 1 y elige uno.
+          {t.whoStarts.fingersHint}
         </p>
       )}
     </>
   );
 }
 
-/* ---------- Ruleta ---------- */
+/* ---------- Spinner ---------- */
 
 function Ruleta({ personas, alElegir }: Props) {
+  const t = useT();
   const [giro, setGiro] = useState(0);
   const [elegido, setElegido] = useState<number | null>(null);
   const [girando, setGirando] = useState(false);
@@ -182,7 +189,7 @@ function Ruleta({ personas, alElegir }: Props) {
     setGiro(actual + 360 * 6 - (i + 0.5) * seg + variacion);
     setGirando(true);
     setElegido(null);
-    // Tics que se van espaciando
+    // Ticks that slow down as the wheel stops
     let t = 0;
     let paso = 40;
     while (t < 3800) {
@@ -218,19 +225,20 @@ function Ruleta({ personas, alElegir }: Props) {
       <span className="grow" />
       {elegido !== null ? (
         <div className="columna">
-          <button className="btn pri" onClick={() => alElegir(elegido)}>Empieza {personas[elegido].nombre}</button>
-          <button className="btn borde" onClick={girar}>Girar otra vez</button>
+          <button className="btn pri" onClick={() => alElegir(elegido)}>{t.whoStarts.startsName(personas[elegido].nombre)}</button>
+          <button className="btn borde" onClick={girar}>{t.whoStarts.spinAgain}</button>
         </div>
       ) : (
-        <button className="btn pri" onClick={girar} disabled={girando}>{girando ? "Girando…" : "Girar"}</button>
+        <button className="btn pri" onClick={girar} disabled={girando}>{girando ? t.whoStarts.spinning : t.whoStarts.spin}</button>
       )}
     </>
   );
 }
 
-/* ---------- Duelo de dados ---------- */
+/* ---------- Dice duel ---------- */
 
 function Duelo({ personas, alElegir }: Props) {
+  const t = useT();
   const [candidatos, setCandidatos] = useState<number[]>(personas.map((_, i) => i));
   const [tiradas, setTiradas] = useState<Record<number, number>>({});
   const [rodando, setRodando] = useState(false);
@@ -252,7 +260,7 @@ function Duelo({ personas, alElegir }: Props) {
   };
 
   const desempatar = () => {
-    setEmpate(ganadores.map((i) => personas[i].nombre).join(" y "));
+    setEmpate(t.join(ganadores.map((i) => personas[i].nombre)));
     setCandidatos(ganadores);
     setTiradas({});
   };
@@ -261,8 +269,8 @@ function Duelo({ personas, alElegir }: Props) {
 
   return (
     <>
-      <h1 className="titulo">Duelo de dados</h1>
-      <p className="dim" style={{ margin: 0 }}>Cada uno lanza un dado. El más alto empieza.</p>
+      <h1 className="titulo">{t.whoStarts.duelTitle}</h1>
+      <p className="dim" style={{ margin: 0 }}>{t.whoStarts.duelIntro}</p>
       <div className="columna duelo">
         {personas.map((p, i) => {
           const fuera = !candidatos.includes(i);
@@ -283,31 +291,31 @@ function Duelo({ personas, alElegir }: Props) {
       </div>
       {empate && !terminado && (
         <div className="aviso centro" style={{ textAlign: "center" }}>
-          <b style={{ color: "var(--gold)" }}>Empate entre {empate}</b>
-          <div className="dim">Desempatan solo ellos</div>
+          <b style={{ color: "var(--gold)" }}>{t.whoStarts.tieBetween(empate)}</b>
+          <div className="dim">{t.whoStarts.tieRoll}</div>
         </div>
       )}
       <span className="grow" />
       {!terminado && (
         <button className="btn pri" onClick={lanzar} disabled={rodando}>
-          {personas[turno].nombre}, {leerAjustes().agitar ? "agita o toca para lanzar" : "toca para lanzar"}
+          {t.whoStarts.rollYourDie(personas[turno].nombre, leerAjustes().agitar)}
         </button>
       )}
       {terminado && ganadores.length > 1 && (
         <button className="btn pri" onClick={desempatar}>
-          Empate: desempatan {ganadores.map((i) => personas[i].nombre).join(" y ")}
+          {t.whoStarts.tieBreak(t.join(ganadores.map((i) => personas[i].nombre)))}
         </button>
       )}
       {terminado && ganadores.length === 1 && (
         <button className="btn pri" onClick={() => alElegir(ganadores[0])}>
-          Empieza {personas[ganadores[0]].nombre}
+          {t.whoStarts.startsName(personas[ganadores[0]].nombre)}
         </button>
       )}
     </>
   );
 }
 
-/* ---------- Al azar ---------- */
+/* ---------- Random ---------- */
 
 function Azar({ personas, alElegir }: Props) {
   const [elegido] = useState(() => Math.floor(Math.random() * personas.length));

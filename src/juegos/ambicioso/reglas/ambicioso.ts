@@ -1,6 +1,6 @@
 import { lanzarDados } from "../../../motor/azar";
 import type { DefinicionJuego, Persona } from "../../../motor/tipos";
-import { puntuar } from "./puntuar";
+import { puntuar, type ScoringPart } from "./puntuar";
 
 export type ModoMeta = "llegarOPasar" | "exacta";
 
@@ -20,8 +20,8 @@ export interface Lanzamiento {
   caras: number[];
   sirven: boolean[];
   puntos: number;
-  partes: string[];
-  /** Todos los dados lanzados sumaron: se recuperan los 4. */
+  partes: ScoringPart[];
+  /** Every rolled die scored ("hot dice"): the player gets all 4 dice back. */
   manoLlena: boolean;
 }
 
@@ -31,26 +31,26 @@ export interface Evento {
   ronda: number;
   jugadorId: string;
   tipo: "planto" | "sancocho" | "pasado";
-  puntos: number; // ganados (planto) o perdidos
+  puntos: number; // points banked, or points lost
   total: number;
 }
 
 export interface EstadoAmbicioso {
   config: ConfigAmbicioso;
-  /** En orden de juego; el índice 0 es quien empezó la partida. */
+  /** In turn order; index 0 is the player who went first. */
   jugadores: JugadorAmbicioso[];
   turnoDe: number;
   ronda: number;
   fase: Fase;
   acumulado: number;
   dadosDisponibles: number;
-  /** Caras ya apartadas en esta mano (para mostrarlas atenuadas). */
+  /** Faces already set aside this hand (shown dimmed). */
   apartados: number[];
   ultimoLanzamiento: Lanzamiento | null;
-  /** Por qué se perdió el turno, si fase === "perdio". */
+  /** Why the turn was lost, when fase === "perdio". */
   motivoPerdida: "sancocho" | "pasado" | null;
   perdido: number;
-  /** Alguien ya alcanzó la meta: la ronda en curso es la última. */
+  /** Someone reached the target: the current round is the last one. */
   ultimaRonda: boolean;
   quienLlego: string | null;
   ganadores: string[];
@@ -60,7 +60,7 @@ export interface EstadoAmbicioso {
 }
 
 export type AccionAmbicioso =
-  /** `caras` solo se usa en pruebas para forzar un resultado. */
+  /** `caras` is only used by tests to force a result. */
   | { tipo: "LANZAR"; caras?: number[] }
   | { tipo: "PLANTARSE" }
   | { tipo: "PASAR_TURNO" }
@@ -95,7 +95,7 @@ export function alcanzaMeta(puntos: number, config: ConfigAmbicioso): boolean {
   return config.modoMeta === "exacta" ? puntos === config.meta : puntos >= config.meta;
 }
 
-/** Jugadores con más puntos (puede haber empate). */
+/** Players with the highest score (there may be a tie). */
 export function lideres(jugadores: JugadorAmbicioso[]): string[] {
   const max = Math.max(...jugadores.map((j) => j.puntos));
   return jugadores.filter((j) => j.puntos === max).map((j) => j.id);
@@ -205,14 +205,14 @@ export function aplicar(e: EstadoAmbicioso, accion: AccionAmbicioso): EstadoAmbi
   }
 }
 
-/** Cuánto le falta al jugador para la meta. */
+/** Points the player still needs to reach the target. */
 export function faltante(e: EstadoAmbicioso, indice = e.turnoDe): number {
   return Math.max(0, e.config.meta - e.jugadores[indice].puntos);
 }
 
 /**
- * En la última ronda: puntos que necesita el jugador para ganar
- * (superar al líder; en meta exacta, llegar justo a la meta).
+ * In the final round: points the player needs to win
+ * (beat the leader; with an exact target, hit it exactly).
  */
 export function necesitaParaGanar(e: EstadoAmbicioso, indice = e.turnoDe): number {
   const j = e.jugadores[indice];

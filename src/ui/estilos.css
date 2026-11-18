@@ -32,7 +32,7 @@ input { user-select: text; -webkit-user-select: text; }
 button { font: inherit; color: inherit; }
 h1, h2, h3 { font-family: var(--f-display); margin: 0; line-height: 1.1; text-wrap: balance; }
 
-/* Pantalla: columna centrada, pensada para el pulgar */
+/* Screen: centered column, built for thumbs */
 .pantalla {
   min-height: 100%;
   max-width: 480px;
@@ -55,7 +55,7 @@ h1, h2, h3 { font-family: var(--f-display); margin: 0; line-height: 1.1; text-wr
 .barra { display: flex; justify-content: space-between; align-items: center; color: var(--dim); font-size: 14px; min-height: 32px; }
 .punto { width: 12px; height: 12px; border-radius: 50%; flex: none; }
 
-/* Botones */
+/* Buttons */
 .btn {
   all: unset;
   box-sizing: border-box;
@@ -94,7 +94,7 @@ h1, h2, h3 { font-family: var(--f-display); margin: 0; line-height: 1.1; text-wr
 }
 .campo:focus { border-color: var(--gold); }
 
-/* Dados */
+/* Dice */
 .dado {
   --s: 52px;
   width: var(--s); height: var(--s); border-radius: calc(var(--s) * .2);
@@ -128,18 +128,18 @@ h1, h2, h3 { font-family: var(--f-display); margin: 0; line-height: 1.1; text-wr
 .pildora.oro { background: rgba(244,185,66,.18); color: var(--gold); }
 .grande { font-family: var(--f-display); font-weight: 800; font-size: 56px; line-height: 1; font-variant-numeric: tabular-nums; }
 
-/* Tira de puntajes */
+/* Score strip */
 .tira { display: flex; gap: 6px; cursor: pointer; }
 .tira > div { flex: 1; background: var(--surface); border-radius: 12px; padding: 6px 9px; min-width: 0; display: flex; flex-direction: column; border: 2px solid transparent; }
 .tira > div.ahora { border-color: var(--c); }
 .tira span { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tira b { font-family: var(--f-mono); font-size: 14px; }
 
-/* Cambio de turno */
+/* Turn hand-off */
 .relevo { border: 2px solid var(--c); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .relevo h2 { font-size: 40px; }
 
-/* Perder */
+/* Bust */
 .fondo-sancocho { background: radial-gradient(circle at 50% 30%, #5a2418, #2a1410 70%); }
 .fondo-ganador { background: radial-gradient(circle at 50% 25%, #5b4512, var(--bg) 70%); }
 .tachado { font-family: var(--f-mono); font-size: 28px; text-decoration: line-through; color: var(--bust); font-weight: 700; }
@@ -152,10 +152,10 @@ h1, h2, h3 { font-family: var(--f-display); margin: 0; line-height: 1.1; text-wr
 .ranking .medidor i { display: block; height: 100%; }
 .bitacora { font-family: var(--f-mono); font-size: 12px; color: var(--dim); display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; }
 
-/* Capas (pausa, marcador, reglas) */
+/* Overlays (pause, scores, rules) */
 .capa { position: fixed; inset: 0; background: var(--bg); z-index: 20; overflow-y: auto; }
 
-/* Navegación de la central */
+/* Hub navigation */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
   background: rgba(22, 34, 63, .96); backdrop-filter: blur(8px);
@@ -188,7 +188,7 @@ h1, h2, h3 { font-family: var(--f-display); margin: 0; line-height: 1.1; text-wr
 .interruptor input:checked { background: var(--gold); }
 .interruptor input:checked::after { transform: translateX(20px); background: var(--gold-ink); }
 
-/* Quién empieza */
+/* Who goes first */
 .zona-dedos { position: relative; flex: 1; min-height: 340px; border-radius: 22px; background: #0f1830; overflow: hidden; touch-action: none; }
 .zona-dedos .dedo { position: absolute; width: 84px; height: 84px; border-radius: 50%; border: 6px solid currentColor; transform: translate(-50%, -50%); transition: width .4s, height .4s, opacity .4s; animation: latir 1s ease-in-out infinite alternate; }
 .zona-dedos .dedo.gana { width: 170px; height: 170px; box-shadow: 0 0 60px currentColor; animation: none; }

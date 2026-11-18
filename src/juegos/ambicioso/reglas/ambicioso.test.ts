@@ -11,8 +11,8 @@ const tirar = (caras: number[]): AccionAmbicioso => ({ tipo: "LANZAR", caras });
 const jugar = (e: EstadoAmbicioso, ...acciones: AccionAmbicioso[]) => acciones.reduce(aplicar, e);
 const nueva = (c: ConfigAmbicioso = config, n = 3) => iniciar(personas.slice(0, n), c, 42);
 
-describe("turno", () => {
-  it("el ejemplo de Diego: 150, 250, 300 y mano llena", () => {
+describe("turn", () => {
+  it("Diego's example: 150, 250, 300 and hot dice", () => {
     let e = jugar(nueva(), tirar([1, 5, 3, 2]));
     expect(e.acumulado).toBe(150);
     expect(e.dadosDisponibles).toBe(2);
@@ -29,7 +29,7 @@ describe("turno", () => {
     expect(e.acumulado).toBe(400);
   });
 
-  it("sancocho pierde el acumulado y pasa el turno", () => {
+  it("a bust loses the turn total and passes the turn", () => {
     let e = jugar(nueva(), tirar([1, 5, 3, 2]), tirar([3, 2]));
     expect(e.fase).toBe("perdio");
     expect(e.motivoPerdida).toBe("sancocho");
@@ -41,19 +41,19 @@ describe("turno", () => {
     expect(e.dadosDisponibles).toBe(4);
   });
 
-  it("plantarse anota y pasa al siguiente", () => {
+  it("banking adds the points and passes the turn", () => {
     const e = jugar(nueva(), tirar([1, 5, 3, 2]), { tipo: "PLANTARSE" });
     expect(e.jugadores[0].puntos).toBe(150);
     expect(e.turnoDe).toBe(1);
     expect(e.historial.at(-1)).toMatchObject({ tipo: "planto", puntos: 150, total: 150 });
   });
 
-  it("no se puede plantar sin haber lanzado", () => {
+  it("cannot bank before rolling", () => {
     const e = nueva();
     expect(aplicar(e, { tipo: "PLANTARSE" })).toBe(e);
   });
 
-  it("la ronda avanza cuando vuelve al primer jugador", () => {
+  it("the round advances when play returns to the first player", () => {
     const e = jugar(
       nueva(),
       tirar([2, 3, 4, 6]), { tipo: "PASAR_TURNO" },
@@ -65,33 +65,33 @@ describe("turno", () => {
   });
 });
 
-describe("final de partida", () => {
-  it("al llegar a la meta se termina la ronda y gana el de más puntos", () => {
+describe("end of game", () => {
+  it("reaching the target plays out the round and the highest score wins", () => {
     let e = jugar(nueva(), tirar([1, 1, 1, 2]), { tipo: "PLANTARSE" }); // Ana 1000
     expect(e.ultimaRonda).toBe(true);
     expect(e.fase).toBe("cambioDeTurno");
     e = jugar(e, tirar([1, 1, 1, 1]), { tipo: "PLANTARSE" }); // Diego 10000
     expect(e.fase).toBe("cambioDeTurno");
-    e = jugar(e, tirar([2, 3, 4, 6]), { tipo: "PASAR_TURNO" }); // Caro sancocho
+    e = jugar(e, tirar([2, 3, 4, 6]), { tipo: "PASAR_TURNO" }); // Caro busts
     expect(e.fase).toBe("ganador");
     expect(e.ganadores).toEqual(["diego"]);
   });
 
-  it("si el último en la ronda llega, termina de inmediato", () => {
+  it("if the last player of the round reaches it, the game ends right away", () => {
     let e = jugar(nueva(), tirar([2, 3, 4, 6]), { tipo: "PASAR_TURNO" }, tirar([2, 3, 4, 6]), { tipo: "PASAR_TURNO" });
     e = jugar(e, tirar([1, 1, 1, 3]), { tipo: "PLANTARSE" });
     expect(e.fase).toBe("ganador");
     expect(e.ganadores).toEqual(["caro"]);
   });
 
-  it("empate al final: ganan todos los empatados", () => {
+  it("a tie at the end: all tied players win", () => {
     let e = jugar(nueva(config, 2), tirar([1, 1, 1, 2]), { tipo: "PLANTARSE" });
     e = jugar(e, tirar([1, 1, 1, 3]), { tipo: "PLANTARSE" });
     expect(e.fase).toBe("ganador");
     expect(e.ganadores).toEqual(["ana", "diego"]);
   });
 
-  it("meta exacta: pasarse pierde el acumulado", () => {
+  it("exact target: going over loses the turn total", () => {
     const exacta: ConfigAmbicioso = { meta: 300, modoMeta: "exacta" };
     let e = jugar(nueva(exacta, 2), tirar([1, 5, 3, 2]), tirar([1, 3]));
     expect(e.acumulado).toBe(250);
@@ -101,7 +101,7 @@ describe("final de partida", () => {
     expect(e.perdido).toBe(250);
   });
 
-  it("meta exacta: llegar justo activa la última ronda; quedar por debajo no", () => {
+  it("exact target: hitting it starts the final round; staying below does not", () => {
     const exacta: ConfigAmbicioso = { meta: 300, modoMeta: "exacta" };
     let e = jugar(nueva(exacta, 2), tirar([1, 5, 3, 2]), { tipo: "PLANTARSE" });
     expect(e.ultimaRonda).toBe(false);
@@ -110,7 +110,7 @@ describe("final de partida", () => {
     expect(e.ganadores).toEqual(["diego"]);
   });
 
-  it("los lanzamientos al azar son reproducibles con la misma semilla", () => {
+  it("random rolls are reproducible with the same seed", () => {
     const a = jugar(nueva(), { tipo: "LANZAR" });
     const b = jugar(nueva(), { tipo: "LANZAR" });
     expect(a.ultimoLanzamiento?.caras).toEqual(b.ultimoLanzamiento?.caras);
