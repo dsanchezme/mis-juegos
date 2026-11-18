@@ -10,7 +10,7 @@ export function necesitaPermiso(): boolean {
   return agitarDisponible() && typeof (DeviceMotionEvent as ConPermiso).requestPermission === "function";
 }
 
-/** En iPhone hay que pedir permiso desde un toque del usuario. */
+/** On iPhone, motion access must be requested from a user tap. */
 export async function pedirPermisoMovimiento(): Promise<boolean> {
   const D = DeviceMotionEvent as ConPermiso;
   if (typeof D.requestPermission !== "function") return true;
@@ -21,13 +21,13 @@ export async function pedirPermisoMovimiento(): Promise<boolean> {
   }
 }
 
-const UMBRAL = 13; // m/s² de cambio para considerar que se está agitando
-const SOLTAR_MS = 350; // tiempo quieto para considerar que soltó
-const MINIMO_MS = 250; // agitar al menos esto para lanzar
+const UMBRAL = 13; // change in m/s² that counts as shaking
+const SOLTAR_MS = 350; // time without shaking before the dice are released
+const MINIMO_MS = 250; // minimum shake time to trigger a roll
 
 /**
- * Detecta agitar el teléfono. Llama a `alAgitar` mientras se agita
- * y a `alSoltar` cuando se deja de agitar.
+ * Detects the phone being shaken. Calls `alAgitar` while shaking
+ * and `alSoltar` once shaking stops.
  */
 export function useAgitar(activo: boolean, alAgitar: (fuerza: number) => void, alSoltar: () => void) {
   const cb = useRef({ alAgitar, alSoltar });

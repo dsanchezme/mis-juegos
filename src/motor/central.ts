@@ -1,3 +1,4 @@
+import { defaultLanguage, type Language } from "../i18n/language";
 import { escribir, leer, nuevoId, useAlmacen } from "./almacen";
 import type { PartidaTerminada, Persona } from "./tipos";
 
@@ -6,6 +7,7 @@ export const COLORES = ["#f4b942", "#4cc9f0", "#f27aa7", "#7fdc97", "#c3a6ff", "
 export type ModoInicio = "dedos" | "ruleta" | "duelo" | "azar" | "lista";
 
 export interface Ajustes {
+  idioma: Language;
   sonido: boolean;
   vibracion: boolean;
   agitar: boolean;
@@ -13,6 +15,7 @@ export interface Ajustes {
 }
 
 export const AJUSTES_INICIALES: Ajustes = {
+  idioma: defaultLanguage(),
   sonido: true,
   vibracion: true,
   agitar: true,
@@ -43,4 +46,4 @@ export function guardarEnHistorial(p: PartidaTerminada): void {
   escribir("historial", [p, ...previo].slice(0, 200));
 }
 
-export const fmt = (n: number) => n.toLocaleString("es-CO");
+export { fmt } from "../i18n";

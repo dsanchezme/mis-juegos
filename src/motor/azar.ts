@@ -1,4 +1,4 @@
-/** Generador de números al azar con semilla (mulberry32). Puro: recibe y devuelve el estado. */
+/** Seeded random number generator (mulberry32). Pure: takes the state and returns the new one. */
 export function siguiente(semilla: number): { valor: number; semilla: number } {
   let t = (semilla + 0x6d2b79f5) | 0;
   const nueva = t;
@@ -8,7 +8,7 @@ export function siguiente(semilla: number): { valor: number; semilla: number } {
   return { valor, semilla: nueva };
 }
 
-/** Lanza `n` dados de 6 caras. */
+/** Rolls `n` six-sided dice. */
 export function lanzarDados(n: number, semilla: number): { caras: number[]; semilla: number } {
   const caras: number[] = [];
   let s = semilla;

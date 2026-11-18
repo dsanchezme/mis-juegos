@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { currentTexts, fmt, useT } from "../../../i18n";
 import { escribir, leer, nuevoId } from "../../../motor/almacen";
-import { fmt, guardarEnHistorial } from "../../../motor/central";
 import { semillaNueva } from "../../../motor/azar";
+import { guardarEnHistorial } from "../../../motor/central";
 import type { Persona } from "../../../motor/tipos";
 import { QuienEmpieza } from "../../../ui/QuienEmpieza";
 import { type EstadoAmbicioso, iniciar } from "../reglas/ambicioso";
 import { NuevaPartida, type Preparacion } from "./NuevaPartida";
 import { Partida } from "./Partida";
 
+/** Storage key for the game in progress (one per game). */
 const CLAVE = "partida:ambicioso";
 
 interface Registro {
@@ -17,12 +19,13 @@ interface Registro {
   estado: EstadoAmbicioso;
 }
 
-const enCurso = (r: Registro | null): r is Registro => !!r && r.estado.fase !== "ganador" && r.estado.fase !== "terminada";
+const enCurso = (r: Registro | null): r is Registro =>
+  !!r && r.estado.fase !== "ganador" && r.estado.fase !== "terminada";
 
 export function resumenPartidaAmbicioso(): string | null {
   const r = leer<Registro | null>(CLAVE, null);
   if (!enCurso(r)) return null;
-  return `le toca a ${r.estado.jugadores[r.estado.turnoDe].nombre}`;
+  return currentTexts().ambicioso.pendingSummary(r.estado.jugadores[r.estado.turnoDe].nombre);
 }
 
 const aPersona = (p: Persona): Persona => ({ id: p.id, nombre: p.nombre, color: p.color });
@@ -36,7 +39,12 @@ function guardarFinal(r: Registro) {
     fecha: new Date().toISOString(),
     jugadores: e.jugadores.map((j) => ({ id: j.id, nombre: j.nombre, color: j.color, puntos: j.puntos })),
     ganadores: e.fase === "ganador" ? e.ganadores : [],
-    detalle: `meta ${e.config.modoMeta === "exacta" ? "exacta " : ""}${fmt(e.config.meta)} · ${e.fase === "ganador" ? `${e.ronda} rondas` : `ronda ${e.ronda}`}`,
+    info: {
+      meta: e.config.meta,
+      exacta: e.config.modoMeta === "exacta",
+      rondas: e.ronda,
+      completa: e.fase === "ganador",
+    },
   });
 }
 
@@ -53,7 +61,12 @@ export function JuegoAmbicioso({ salir }: { salir: () => void }) {
 
   const comenzar = (prep: Preparacion, inicial: number) => {
     const personas = rotar(prep.personas.map(aPersona), inicial);
-    guardar({ id: nuevoId(), inicio: new Date().toISOString(), preparacion: prep, estado: iniciar(personas, prep.config, semillaNueva()) });
+    guardar({
+      id: nuevoId(),
+      inicio: new Date().toISOString(),
+      preparacion: prep,
+      estado: iniciar(personas, prep.config, semillaNueva()),
+    });
     setPaso({ t: "partida" });
   };
 
@@ -73,17 +86,31 @@ export function JuegoAmbicioso({ salir }: { salir: () => void }) {
   const revancha = () => {
     if (!registro) return;
     const js = registro.estado.jugadores;
-    // Empieza quien quedó de último, conservando el orden de la mesa.
+    // Whoever came last goes first; seating order is kept.
     const minimo = Math.min(...js.map((j) => j.puntos));
     const ultimo = js.findIndex((j) => j.puntos === minimo);
     comenzar({ ...registro.preparacion, personas: js.map(aPersona) }, ultimo);
   };
 
   if (paso.t === "retomar" && enCurso(registro)) {
-    return <Retomar r={registro} seguir={() => setPaso({ t: "partida" })} nueva={() => setPaso({ t: "nueva" })} salir={salir} />;
+    return (
+      <Retomar
+        r={registro}
+        seguir={() => setPaso({ t: "partida" })}
+        nueva={() => setPaso({ t: "nueva" })}
+        salir={salir}
+      />
+    );
   }
   if (paso.t === "quien") {
-    return <QuienEmpieza personas={paso.prep.personas} modo={paso.prep.modoInicio} alElegir={(i) => comenzar(paso.prep, i)} volver={() => setPaso({ t: "nueva" })} />;
+    return (
+      <QuienEmpieza
+        personas={paso.prep.personas}
+        modo={paso.prep.modoInicio}
+        alElegir={(i) => comenzar(paso.prep, i)}
+        volver={() => setPaso({ t: "nueva" })}
+      />
+    );
   }
   if (paso.t === "partida" && registro) {
     return (
@@ -101,7 +128,7 @@ export function JuegoAmbicioso({ salir }: { salir: () => void }) {
       previa={registro?.preparacion}
       salir={salir}
       listo={(prep) => {
-        if (enCurso(registro)) guardar(null); // se descarta la partida a medias
+        if (enCurso(registro)) guardar(null); // discard the unfinished game
         if (prep.modoInicio === "lista") comenzar(prep, 0);
         else setPaso({ t: "quien", prep });
       }}
@@ -109,44 +136,75 @@ export function JuegoAmbicioso({ salir }: { salir: () => void }) {
   );
 }
 
-function Retomar({ r, seguir, nueva, salir }: { r: Registro; seguir: () => void; nueva: () => void; salir: () => void }) {
+function Retomar({
+  r,
+  seguir,
+  nueva,
+  salir,
+}: {
+  r: Registro;
+  seguir: () => void;
+  nueva: () => void;
+  salir: () => void;
+}) {
+  const t = useT();
+  const a = t.ambicioso;
   const [confirmar, setConfirmar] = useState(false);
   const e = r.estado;
   const j = e.jugadores[e.turnoDe];
   const hace = Math.round((Date.now() - new Date(r.inicio).getTime()) / 60000);
-  const cuando = hace < 60 ? `hace ${Math.max(1, hace)} min` : hace < 1440 ? `hace ${Math.round(hace / 60)} h` : `hace ${Math.round(hace / 1440)} días`;
+  const cuando =
+    hace < 60
+      ? a.minutesAgo(Math.max(1, hace))
+      : hace < 1440
+        ? a.hoursAgo(Math.round(hace / 60))
+        : a.daysAgo(Math.round(hace / 1440));
   return (
     <div className="pantalla">
-      <div className="barra"><button className="enlace" onClick={salir}>‹ Mis juegos</button></div>
-      <h1 className="titulo">Tienes una partida a medias</h1>
+      <div className="barra">
+        <button type="button" className="enlace" onClick={salir}>
+          {t.common.backToGames}
+        </button>
+      </div>
+      <h1 className="titulo">{a.resumeTitle}</h1>
       <div className="tarjeta columna">
-        <span className="lbl">Ambicioso · empezó {cuando}</span>
-        {[...e.jugadores].sort((a, b) => b.puntos - a.puntos).map((x) => (
-          <div key={x.id} className="fila">
-            <span className="punto" style={{ background: x.color }} />
-            <span className="grow">{x.nombre}</span>
-            <b className="mono">{fmt(x.puntos)}</b>
-          </div>
-        ))}
+        <span className="lbl">{a.startedAgo(cuando)}</span>
+        {[...e.jugadores]
+          .sort((a, b) => b.puntos - a.puntos)
+          .map((x) => (
+            <div key={x.id} className="fila">
+              <span className="punto" style={{ background: x.color }} />
+              <span className="grow">{x.nombre}</span>
+              <b className="mono">{fmt(x.puntos)}</b>
+            </div>
+          ))}
         <span className="dim" style={{ fontSize: 13 }}>
-          Le toca a {j.nombre}
-          {e.fase === "lanzado" ? `, lleva ${fmt(e.acumulado)} en el turno` : ""}
-          {e.fase === "perdio" ? ", acaba de perder su turno" : ""}
+          {a.whoseTurn(j.nombre)}
+          {e.fase === "lanzado" ? a.turnSoFar(fmt(e.acumulado)) : ""}
+          {e.fase === "perdio" ? a.justLost : ""}
         </span>
       </div>
       <span className="grow" />
       <div className="columna">
-        <button className="btn pri" onClick={seguir}>Retomar</button>
+        <button type="button" className="btn pri" onClick={seguir}>
+          {a.resume}
+        </button>
         {confirmar ? (
           <div className="tarjeta columna">
-            <b>¿Empezar otra? La partida a medias se descarta al empezar la nueva.</b>
+            <b>{a.discardConfirm}</b>
             <div className="fila">
-              <button className="btn borde chico grow" onClick={() => setConfirmar(false)}>Cancelar</button>
-              <button className="btn peligro chico grow" onClick={nueva}>Sí, empezar otra</button>
+              <button type="button" className="btn borde chico grow" onClick={() => setConfirmar(false)}>
+                {t.common.cancel}
+              </button>
+              <button type="button" className="btn peligro chico grow" onClick={nueva}>
+                {a.discardYes}
+              </button>
             </div>
           </div>
         ) : (
-          <button className="btn borde" onClick={() => setConfirmar(true)}>Empezar una nueva</button>
+          <button type="button" className="btn borde" onClick={() => setConfirmar(true)}>
+            {a.newInstead}
+          </button>
         )}
       </div>
     </div>

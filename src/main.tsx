@@ -7,12 +7,15 @@ import "@fontsource/figtree/700.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "@fontsource/jetbrains-mono/700.css";
 import "./ui/estilos.css";
-import { App } from "./App";
 import { registerSW } from "virtual:pwa-register";
+import { App } from "./App";
 
 registerSW({ immediate: true });
 
-createRoot(document.getElementById("root")!).render(
+const raiz = document.getElementById("root");
+if (!raiz) throw new Error("Falta el elemento #root en index.html");
+
+createRoot(raiz).render(
   <StrictMode>
     <App />
   </StrictMode>,
