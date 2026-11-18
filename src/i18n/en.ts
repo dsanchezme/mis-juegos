@@ -30,7 +30,8 @@ export const en: Texts = {
 
   players: {
     title: "Players",
-    intro: "People you've played with, so you don't have to type their names every time. When you start a game, just pick who's playing.",
+    intro:
+      "People you've played with, so you don't have to type their names every time. When you start a game, just pick who's playing.",
     games: (n: number) => (n === 1 ? "1 game" : `${n} games`),
     empty: "No players yet. Add someone here, or when you start a game.",
     changeColor: (name: string) => `Change ${name}'s color`,
@@ -97,7 +98,8 @@ export const en: Texts = {
     tieBreak: (names: string) => `Tie: ${names} roll again`,
   },
 
-  join: (names: string[]) => (names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`),
+  join: (names: string[]) =>
+    names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`,
 
   ambicioso: {
     name: "Ambicioso",
@@ -164,13 +166,15 @@ export const en: Texts = {
     exactHit: "Right on target! Bank to win.",
     reachesTarget: "Bank now and you reach the target.",
     exactMissing: (pts: string) => `You'd still need ${pts} to hit the target exactly.`,
-    keepRolling: (n: number, shake: boolean) => `Keep going · ${shake ? "shake or tap to " : ""}roll ${n === 1 ? "1 die" : `${n} dice`}`,
+    keepRolling: (n: number, shake: boolean) =>
+      `Keep going · ${shake ? "shake or tap to " : ""}roll ${n === 1 ? "1 die" : `${n} dice`}`,
     bank: (pts: string) => `Bank ${pts}`,
 
     part: (p, fmt) => {
       const words = ["", "one", "two", "three", "four"];
       const face = (n: number, plural: boolean) => (plural ? `${n}s` : `${n}`);
-      if (p.kind === "single") return `${p.count === 1 ? "a" : words[p.count]} ${face(p.face, p.count > 1)} = ${fmt(p.points)}`;
+      if (p.kind === "single")
+        return `${p.count === 1 ? "a" : words[p.count]} ${face(p.face, p.count > 1)} = ${fmt(p.points)}`;
       return `${p.kind === "four" ? "four" : "three"} ${face(p.face, true)} = ${fmt(p.points)}`;
     },
 

@@ -30,7 +30,8 @@ export const es = {
 
   players: {
     title: "Jugadores",
-    intro: "Las personas con las que has jugado, para no escribir el nombre cada vez. Al crear una partida eliges quién juega hoy.",
+    intro:
+      "Las personas con las que has jugado, para no escribir el nombre cada vez. Al crear una partida eliges quién juega hoy.",
     games: (n: number) => (n === 1 ? "1 partida" : `${n} partidas`),
     empty: "Todavía no hay jugadores. Agrega el primero aquí o al crear una partida.",
     changeColor: (name: string) => `Cambiar color de ${name}`,
@@ -93,7 +94,8 @@ export const es = {
     duelIntro: "Cada uno lanza un dado. El más alto empieza.",
     tieBetween: (names: string) => `Empate entre ${names}`,
     tieRoll: "Desempatan solo ellos",
-    rollYourDie: (name: string, shake: boolean) => `${name}, ${shake ? "agita o toca para lanzar" : "toca para lanzar"}`,
+    rollYourDie: (name: string, shake: boolean) =>
+      `${name}, ${shake ? "agita o toca para lanzar" : "toca para lanzar"}`,
     tieBreak: (names: string) => `Empate: desempatan ${names}`,
   },
 
@@ -165,7 +167,8 @@ export const es = {
     exactHit: "¡Justo la meta! Plántate para ganar.",
     reachesTarget: "Si te plantas alcanzas la meta.",
     exactMissing: (pts: string) => `Te faltarían ${pts} para la meta exacta.`,
-    keepRolling: (n: number, shake: boolean) => `Seguir · ${shake ? "agita o toca para " : ""}lanzar ${n === 1 ? "1 dado" : `${n} dados`}`,
+    keepRolling: (n: number, shake: boolean) =>
+      `Seguir · ${shake ? "agita o toca para " : ""}lanzar ${n === 1 ? "1 dado" : `${n} dados`}`,
     bank: (pts: string) => `Plantarme y anotar ${pts}`,
 
     part: (p: ScoringPart, fmt: (n: number) => string) =>
@@ -229,5 +232,11 @@ export const es = {
   },
 };
 
-type Widen<T> = T extends string ? string : T extends readonly (infer U)[] ? Widen<U>[] : T extends (...a: infer A) => infer R ? (...a: A) => R : { [K in keyof T]: Widen<T[K]> };
+type Widen<T> = T extends string
+  ? string
+  : T extends readonly (infer U)[]
+    ? Widen<U>[]
+    : T extends (...a: infer A) => infer R
+      ? (...a: A) => R
+      : { [K in keyof T]: Widen<T[K]> };
 export type Texts = Widen<typeof es>;

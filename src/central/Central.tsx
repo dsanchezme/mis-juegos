@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { CATALOGO } from "../juegos/catalogo";
 import { useT } from "../i18n";
+import { CATALOGO } from "../juegos/catalogo";
 import { Dado } from "../ui/Dado";
 import { Ajustes } from "./Ajustes";
 import { Historial } from "./Historial";
@@ -22,7 +22,12 @@ interface EventoInstalar extends Event {
 export function Central({ abrir }: { abrir: (id: string) => void }) {
   const [pestana, setPestana] = useState<Pestana>("juegos");
   const t = useT();
-  const nombres: Record<Pestana, string> = { juegos: t.nav.games, historial: t.nav.history, jugadores: t.nav.players, ajustes: t.nav.settings };
+  const nombres: Record<Pestana, string> = {
+    juegos: t.nav.games,
+    historial: t.nav.history,
+    jugadores: t.nav.players,
+    ajustes: t.nav.settings,
+  };
   return (
     <>
       <div className="pantalla con-nav">
@@ -34,8 +39,16 @@ export function Central({ abrir }: { abrir: (id: string) => void }) {
       <nav className="nav" aria-label={t.nav.sections}>
         <div>
           {PESTANAS.map((p) => (
-            <button key={p.id} className={pestana === p.id ? "on" : ""} onClick={() => setPestana(p.id)} aria-current={pestana === p.id}>
-              <span className="ic" aria-hidden="true">{p.icono}</span>
+            <button
+              type="button"
+              key={p.id}
+              className={pestana === p.id ? "on" : ""}
+              onClick={() => setPestana(p.id)}
+              aria-current={pestana === p.id}
+            >
+              <span className="ic" aria-hidden="true">
+                {p.icono}
+              </span>
               {nombres[p.id]}
             </button>
           ))}
@@ -67,10 +80,20 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
       </div>
 
       {pendientes.map(({ j, resumen }) => (
-        <button key={j.id} className="tarjeta oro btn" style={{ justifyContent: "space-between", textAlign: "left", fontWeight: 500 }} onClick={() => abrir(j.id)}>
+        <button
+          type="button"
+          key={j.id}
+          className="tarjeta oro btn"
+          style={{ justifyContent: "space-between", textAlign: "left", fontWeight: 500 }}
+          onClick={() => abrir(j.id)}
+        >
           <span className="columna" style={{ gap: 2 }}>
-            <span className="lbl" style={{ color: "var(--gold)" }}>{t.home.continue}</span>
-            <span>{j.nombre(t)} · {resumen}</span>
+            <span className="lbl" style={{ color: "var(--gold)" }}>
+              {t.home.continue}
+            </span>
+            <span>
+              {j.nombre(t)} · {resumen}
+            </span>
           </span>
           <b style={{ color: "var(--gold)" }}>{t.home.resume}</b>
         </button>
@@ -79,13 +102,17 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
       <span className="lbl">{t.home.games}</span>
       <div className="juegos">
         {CATALOGO.map((j) => (
-          <button key={j.id} className="tarjeta-juego" onClick={() => abrir(j.id)}>
+          <button type="button" key={j.id} className="tarjeta-juego" onClick={() => abrir(j.id)}>
             <span className="fila" style={{ gap: 4 }}>
-              {j.caras.map((c, i) => <Dado key={i} cara={c} tamano={26} />)}
+              {j.caras.map((c, i) => (
+                <Dado key={i} cara={c} tamano={26} />
+              ))}
             </span>
             <span className="grow" />
             <b>{j.nombre(t)}</b>
-            <span className="dim" style={{ fontSize: 13 }}>{j.descripcion(t)}</span>
+            <span className="dim" style={{ fontSize: 13 }}>
+              {j.descripcion(t)}
+            </span>
           </button>
         ))}
         {Array.from({ length: Math.max(1, 3 - (CATALOGO.length - 1)) }, (_, i) => (
@@ -100,8 +127,19 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
       {instalar && (
         <div className="tarjeta columna">
           <b>{t.home.installTitle}</b>
-          <span className="dim" style={{ fontSize: 14 }}>{t.home.installBody}</span>
-          <button className="btn sec chico" onClick={() => { void instalar.prompt(); setInstalar(null); }}>{t.home.install}</button>
+          <span className="dim" style={{ fontSize: 14 }}>
+            {t.home.installBody}
+          </span>
+          <button
+            type="button"
+            className="btn sec chico"
+            onClick={() => {
+              void instalar.prompt();
+              setInstalar(null);
+            }}
+          >
+            {t.home.install}
+          </button>
         </div>
       )}
     </>

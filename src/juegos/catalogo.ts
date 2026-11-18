@@ -25,6 +25,7 @@ export const CATALOGO: EntradaCatalogo[] = [
     caras: [1, 5],
     Componente: JuegoAmbicioso,
     resumenPartida: resumenPartidaAmbicioso,
-    describir: (info, t) => t.ambicioso.historyDetail(!!info.exacta, fmt(Number(info.meta)), !!info.completa, Number(info.rondas)),
+    describir: (info, t) =>
+      t.ambicioso.historyDetail(!!info.exacta, fmt(Number(info.meta)), !!info.completa, Number(info.rondas)),
   },
 ];

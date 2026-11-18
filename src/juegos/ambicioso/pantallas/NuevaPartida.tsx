@@ -63,7 +63,9 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
   return (
     <div className="pantalla">
       <div className="barra">
-        <button className="enlace" onClick={salir}>{t.common.backToGames}</button>
+        <button type="button" className="enlace" onClick={salir}>
+          {t.common.backToGames}
+        </button>
         <span>{a.name}</span>
         <span style={{ width: 50 }} />
       </div>
@@ -76,9 +78,32 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
             <div key={p.id} className="persona">
               <span className="punto" style={{ background: p.color }} />
               <span className="nombre">{p.nombre}</span>
-              <button className="boton-icono" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={a.moveUp(p.nombre)}>↑</button>
-              <button className="boton-icono" onClick={() => mover(i, 1)} disabled={i === seleccion.length - 1} aria-label={a.moveDown(p.nombre)}>↓</button>
-              <button className="boton-icono" onClick={() => alternar(p.id)} aria-label={t.players.removeLabel(p.nombre)}>✕</button>
+              <button
+                type="button"
+                className="boton-icono"
+                onClick={() => mover(i, -1)}
+                disabled={i === 0}
+                aria-label={a.moveUp(p.nombre)}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                className="boton-icono"
+                onClick={() => mover(i, 1)}
+                disabled={i === seleccion.length - 1}
+                aria-label={a.moveDown(p.nombre)}
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                className="boton-icono"
+                onClick={() => alternar(p.id)}
+                aria-label={t.players.removeLabel(p.nombre)}
+              >
+                ✕
+              </button>
             </div>
           ))}
         </div>
@@ -86,34 +111,86 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
       {disponibles.length > 0 && (
         <div className="chips">
           {disponibles.map((p) => (
-            <button key={p.id} className="chip" onClick={() => alternar(p.id)}>
+            <button type="button" key={p.id} className="chip" onClick={() => alternar(p.id)}>
               <span className="punto" style={{ background: p.color }} />+ {p.nombre}
             </button>
           ))}
         </div>
       )}
-      <form className="fila" onSubmit={(e) => { e.preventDefault(); agregar(); }}>
-        <input id="np-nombre" className="campo" placeholder={a.addNew} value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={20} />
-        <button className="btn sec chico" type="submit" disabled={!nombre.trim()}>{t.common.add}</button>
+      <form
+        className="fila"
+        onSubmit={(e) => {
+          e.preventDefault();
+          agregar();
+        }}
+      >
+        <input
+          id="np-nombre"
+          className="campo"
+          placeholder={a.addNew}
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          maxLength={20}
+        />
+        <button className="btn sec chico" type="submit" disabled={!nombre.trim()}>
+          {t.common.add}
+        </button>
       </form>
-      {seleccion.length === 1 && <span className="dim" style={{ fontSize: 14 }}>{a.oneMore}</span>}
+      {seleccion.length === 1 && (
+        <span className="dim" style={{ fontSize: 14 }}>
+          {a.oneMore}
+        </span>
+      )}
 
       <span className="lbl">{a.target}</span>
       <div className="chips">
         {METAS.map((m) => (
-          <button key={m} className={`chip mono ${!otraMeta && meta === m ? "on" : ""}`} onClick={() => { setMeta(m); setOtraMeta(false); }}>{fmt(m)}</button>
+          <button
+            type="button"
+            key={m}
+            className={`chip mono ${!otraMeta && meta === m ? "on" : ""}`}
+            onClick={() => {
+              setMeta(m);
+              setOtraMeta(false);
+            }}
+          >
+            {fmt(m)}
+          </button>
         ))}
-        <button className={`chip ${otraMeta ? "on" : ""}`} onClick={() => setOtraMeta(true)}>{a.other}</button>
+        <button type="button" className={`chip ${otraMeta ? "on" : ""}`} onClick={() => setOtraMeta(true)}>
+          {a.other}
+        </button>
       </div>
       {otraMeta && (
         <div className="columna" style={{ gap: 4 }}>
-          <input id="np-meta" className="campo mono" type="number" inputMode="numeric" step={50} min={50} value={Number.isFinite(meta) ? meta : ""} onChange={(e) => setMeta(parseInt(e.target.value, 10))} />
+          <input
+            id="np-meta"
+            className="campo mono"
+            type="number"
+            inputMode="numeric"
+            step={50}
+            min={50}
+            value={Number.isFinite(meta) ? meta : ""}
+            onChange={(e) => setMeta(parseInt(e.target.value, 10))}
+          />
           {!metaValida && <span style={{ color: "var(--bust)", fontSize: 13 }}>{a.invalidTarget}</span>}
         </div>
       )}
       <div className="chips">
-        <button className={`chip ${modoMeta === "llegarOPasar" ? "on" : ""}`} onClick={() => setModoMeta("llegarOPasar")}>{a.reachOrPass}</button>
-        <button className={`chip ${modoMeta === "exacta" ? "on" : ""}`} onClick={() => setModoMeta("exacta")}>{a.exact}</button>
+        <button
+          type="button"
+          className={`chip ${modoMeta === "llegarOPasar" ? "on" : ""}`}
+          onClick={() => setModoMeta("llegarOPasar")}
+        >
+          {a.reachOrPass}
+        </button>
+        <button
+          type="button"
+          className={`chip ${modoMeta === "exacta" ? "on" : ""}`}
+          onClick={() => setModoMeta("exacta")}
+        >
+          {a.exact}
+        </button>
       </div>
       <span className="dim" style={{ fontSize: 13 }}>
         {modoMeta === "exacta" ? a.exactHint : a.reachHint} {a.roundEndsHint}
@@ -122,12 +199,24 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
       <span className="lbl">{a.whoStarts}</span>
       <div className="chips">
         {modos.map((m) => (
-          <button key={m} className={`chip ${modoInicio === m ? "on" : ""}`} onClick={() => setModoInicio(m)}>{nombreInicio(t, m)}</button>
+          <button
+            type="button"
+            key={m}
+            className={`chip ${modoInicio === m ? "on" : ""}`}
+            onClick={() => setModoInicio(m)}
+          >
+            {nombreInicio(t, m)}
+          </button>
         ))}
       </div>
 
       <span className="grow" />
-      <button className="btn pri" disabled={!puede} onClick={() => listo({ personas: seleccion, config: { meta, modoMeta }, modoInicio })}>
+      <button
+        type="button"
+        className="btn pri"
+        disabled={!puede}
+        onClick={() => listo({ personas: seleccion, config: { meta, modoMeta }, modoInicio })}
+      >
         {a.start}
       </button>
     </div>

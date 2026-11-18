@@ -34,13 +34,13 @@ export function puntuar(caras: number[]): Puntaje {
       const grupo = indices.length >= 4 ? 4 : 3;
       const valor = grupo === 4 ? (n === 1 ? 10000 : n * 1000) : n === 1 ? 1000 : n * 100;
       puntos += valor;
-      indices.slice(0, grupo).forEach((i) => (sirven[i] = true));
+      for (const i of indices.slice(0, grupo)) sirven[i] = true;
       partes.push({ kind: grupo === 4 ? "four" : "three", face: n, count: grupo, points: valor });
       sueltos = indices.slice(grupo);
     }
     if ((n === 1 || n === 5) && sueltos.length) {
       const unidad = n === 1 ? 100 : 50;
-      sueltos.forEach((i) => (sirven[i] = true));
+      for (const i of sueltos) sirven[i] = true;
       puntos += unidad * sueltos.length;
       partes.push({ kind: "single", face: n, count: sueltos.length, points: unidad * sueltos.length });
     }

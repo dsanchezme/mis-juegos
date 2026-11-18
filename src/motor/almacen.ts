@@ -32,7 +32,7 @@ export function useAlmacen<T>(clave: string, porDefecto: T): [T, (v: T | ((previ
     window.addEventListener("mis-juegos:almacen", alCambiar);
     return () => window.removeEventListener("mis-juegos:almacen", alCambiar);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clave]);
+  }, [clave, porDefecto]);
 
   const guardar = useCallback(
     (v: T | ((previo: T) => T)) => {
@@ -41,7 +41,7 @@ export function useAlmacen<T>(clave: string, porDefecto: T): [T, (v: T | ((previ
       setValor(nuevo);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [clave],
+    [clave, porDefecto],
   );
   return [valor, guardar];
 }
