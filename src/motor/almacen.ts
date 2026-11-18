@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const PREFIJO = "mis-juegos:";
 
@@ -24,24 +24,26 @@ export function escribir<T>(clave: string, valor: T | null): void {
 /** React state backed by the device's local storage. */
 export function useAlmacen<T>(clave: string, porDefecto: T): [T, (v: T | ((previo: T) => T)) => void] {
   const [valor, setValor] = useState<T>(() => leer(clave, porDefecto));
+  // Callers usually pass a fresh literal (`[]`, `{}`) on every render. Keeping the latest one in a ref
+  // means the listener and `guardar` only change when the key does, without stale defaults.
+  const porDefectoRef = useRef(porDefecto);
+  porDefectoRef.current = porDefecto;
 
   useEffect(() => {
     const alCambiar = (ev: Event) => {
-      if ((ev as CustomEvent).detail === clave) setValor(leer(clave, porDefecto));
+      if ((ev as CustomEvent).detail === clave) setValor(leer(clave, porDefectoRef.current));
     };
     window.addEventListener("mis-juegos:almacen", alCambiar);
     return () => window.removeEventListener("mis-juegos:almacen", alCambiar);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clave, porDefecto]);
+  }, [clave]);
 
   const guardar = useCallback(
     (v: T | ((previo: T) => T)) => {
-      const nuevo = typeof v === "function" ? (v as (p: T) => T)(leer(clave, porDefecto)) : v;
+      const nuevo = typeof v === "function" ? (v as (p: T) => T)(leer(clave, porDefectoRef.current)) : v;
       escribir(clave, nuevo);
       setValor(nuevo);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [clave, porDefecto],
+    [clave],
   );
   return [valor, guardar];
 }
