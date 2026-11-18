@@ -56,6 +56,13 @@ describe("useAlmacen", () => {
     expect(b.result.current[0]).toBe("b");
   });
 
+  it("keeps the setter stable across renders even with a literal default", () => {
+    const { result, rerender } = renderHook(() => useAlmacen<string[]>("list", []));
+    const first = result.current[1];
+    rerender();
+    expect(result.current[1]).toBe(first);
+  });
+
   it("ignores changes to other keys", () => {
     const { result } = renderHook(() => useAlmacen("propia", 1));
     act(() => escribir("otra", 9));
