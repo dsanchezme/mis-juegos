@@ -3,13 +3,13 @@
 [![CI](https://github.com/dsanchezme/mis-juegos/actions/workflows/ci.yml/badge.svg)](https://github.com/dsanchezme/mis-juegos/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/dsanchezme/mis-juegos/actions/workflows/codeql.yml/badge.svg)](https://github.com/dsanchezme/mis-juegos/actions/workflows/codeql.yml)
 
-A hub of digital board games played on a single phone, tablet or computer. It is an installable web app (PWA): it opens in any browser, installs like an app and works offline.
+A hub of digital board games played on a single phone, tablet or computer. It is an installable web app (PWA): it opens in any browser, installs like an app and works offline. It is available in Spanish and English.
 
 **Play it:** https://dsanchezme.github.io/mis-juegos/
 
 ## Games
 
-- **Ambicioso**: dice, 2+ players. Roll 4 dice; ones and fives score, and so do three and four of a kind. If no die scores it's a _sancocho_ and you lose everything you built up that turn.
+- **Ambicioso**: dice, 2+ players. Roll 4 dice; ones and fives score, and so do three and four of a kind. If no die scores it's a _sancocho_ (a bust) and you lose everything you built up that turn.
 
 ## Getting started
 
@@ -42,6 +42,7 @@ src/
   central/            hub screens: games, history, players, settings
   motor/              shared engine: game contract, seeded randomness, storage
   ui/                 dice, styles, sound and haptics, shake to roll, who goes first
+  i18n/               Spanish and English texts, and the language hook
   juegos/
     catalogo.ts       list of games shown in the hub
     ambicioso/
@@ -52,7 +53,17 @@ e2e/                  end-to-end tests (Playwright)
 
 Each game exposes its rules as a pure function, `aplicar(estado, accion)`. Rules are tested without any UI and, later on, online mode can run the very same rules on a server.
 
-To add a game, create `src/juegos/<id>/` with `reglas/` and `pantallas/`, and register it in `src/juegos/catalogo.ts`.
+To add a game, create `src/juegos/<id>/` with `reglas/` and `pantallas/`, add its texts to both language files, and register it in `src/juegos/catalogo.ts`.
+
+## Languages
+
+All user-facing text lives in `src/i18n/es.ts` and `src/i18n/en.ts`; components never hard-code strings. Read them with the `useT()` hook and format numbers with `fmt()`, which follows the chosen language (5.000 in Spanish, 5,000 in English).
+
+- The player picks the language in **Settings**. Until they do, the app follows the device language (Spanish for any `es-*` locale, English otherwise).
+- `en.ts` is typed against `es.ts`, so a missing or misspelled key fails the type check.
+- Translations are written to read naturally, not word for word. English uses the usual dice-game terms: _bank_ (plantarse), _bust_ (sancocho), _hot dice_ (mano llena).
+- Rules return data, not sentences (for example, the scoring parts of a roll), and the UI turns that data into text in the current language. Keep it that way so saved games and history display correctly after a language change.
+- Code identifiers are in Spanish; comments and documentation are in English.
 
 ## Quality and delivery
 

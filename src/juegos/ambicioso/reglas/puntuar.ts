@@ -1,24 +1,30 @@
-export interface Puntaje {
-  puntos: number;
-  /** Para cada dado lanzado, si suma o no. */
-  sirven: boolean[];
-  /** Explicación legible, p. ej. ["tres 1 = 1.000", "un 5 = 50"]. */
-  partes: string[];
+/** One scoring group in a roll, e.g. three 4s or a single 5. */
+export interface ScoringPart {
+  kind: "single" | "three" | "four";
+  face: number;
+  count: number;
+  points: number;
 }
 
-const fmt = (n: number) => n.toLocaleString("es-CO");
+export interface Puntaje {
+  puntos: number;
+  /** For each rolled die, whether it scores. */
+  sirven: boolean[];
+  /** Scoring groups, used by the UI to explain the score. */
+  partes: ScoringPart[];
+}
 
 /**
- * Puntaje de un lanzamiento.
+ * Score of a single roll.
  * - 1 = 100, 5 = 50
- * - Tres iguales = número × 100 (tres 1 = 1.000)
- * - Cuatro iguales = número × 1.000 (cuatro 1 = 10.000)
- * Los tríos y pókeres solo cuentan dentro del mismo lanzamiento.
- * Todos los dados que suman cuentan obligatoriamente.
+ * - Three of a kind = face × 100 (three 1s = 1,000)
+ * - Four of a kind = face × 1,000 (four 1s = 10,000)
+ * Three and four of a kind only count within the same roll.
+ * Every scoring die counts; the player cannot choose to keep fewer.
  */
 export function puntuar(caras: number[]): Puntaje {
   const sirven = caras.map(() => false);
-  const partes: string[] = [];
+  const partes: ScoringPart[] = [];
   let puntos = 0;
 
   for (let n = 1; n <= 6; n++) {
@@ -29,16 +35,14 @@ export function puntuar(caras: number[]): Puntaje {
       const valor = grupo === 4 ? (n === 1 ? 10000 : n * 1000) : n === 1 ? 1000 : n * 100;
       puntos += valor;
       for (const i of indices.slice(0, grupo)) sirven[i] = true;
-      partes.push(`${grupo === 4 ? "cuatro" : "tres"} ${n} = ${fmt(valor)}`);
+      partes.push({ kind: grupo === 4 ? "four" : "three", face: n, count: grupo, points: valor });
       sueltos = indices.slice(grupo);
     }
-    if (n === 1 || n === 5) {
+    if ((n === 1 || n === 5) && sueltos.length) {
       const unidad = n === 1 ? 100 : 50;
       for (const i of sueltos) sirven[i] = true;
-      if (sueltos.length) {
-        puntos += unidad * sueltos.length;
-        partes.push(`${sueltos.length === 1 ? "un" : sueltos.length} ${n} = ${fmt(unidad * sueltos.length)}`);
-      }
+      puntos += unidad * sueltos.length;
+      partes.push({ kind: "single", face: n, count: sueltos.length, points: unidad * sueltos.length });
     }
   }
   return { puntos, sirven, partes };

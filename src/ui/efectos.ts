@@ -1,6 +1,6 @@
 import { leerAjustes } from "../motor/central";
 
-/* Sonidos sintetizados con Web Audio: no requieren archivos y funcionan sin internet. */
+/* Sounds are synthesized with Web Audio: no audio files, and they work offline. */
 
 let ctx: AudioContext | null = null;
 function audio(): AudioContext | null {
@@ -59,11 +59,11 @@ export function vibrar(patron: number | number[]) {
   try {
     navigator.vibrate?.(patron);
   } catch {
-    /* no disponible (iPhone o computador) */
+    /* not available (iPhone or desktop) */
   }
 }
 
-/** Desbloquea el audio en el primer toque (requisito de los navegadores). */
+/** Unlocks audio on the first tap (browsers require a user gesture). */
 export function desbloquearAudio() {
   audio();
 }

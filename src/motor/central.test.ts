@@ -23,11 +23,11 @@ const partida = (id: string): PartidaTerminada => ({
   fecha: "2026-11-18T00:00:00.000Z",
   jugadores: [],
   ganadores: [],
-  detalle: "",
+  info: {},
 });
 
 describe("crearPersona", () => {
-  it("recorta el nombre y usa el primer color libre", () => {
+  it("trims the name and uses the first free color", () => {
     const ana: Persona = { id: "1", nombre: "Ana", color: COLORES[0] };
     const p = crearPersona("  Diego  ", [ana]);
     expect(p.nombre).toBe("Diego");
@@ -35,26 +35,26 @@ describe("crearPersona", () => {
     expect(p.id).not.toBe("");
   });
 
-  it("repite colores en orden cuando ya se usaron todos", () => {
+  it("reuses colors in order once all are taken", () => {
     const todos = COLORES.map((color, i) => ({ id: String(i), nombre: `P${i}`, color }));
     expect(crearPersona("Otro", todos).color).toBe(COLORES[0]);
   });
 });
 
 describe("guardarEnHistorial", () => {
-  it("agrega la partida más reciente de primera", () => {
+  it("adds the most recent game first", () => {
     guardarEnHistorial(partida("a"));
     guardarEnHistorial(partida("b"));
     expect(leer<PartidaTerminada[]>("historial", []).map((p) => p.id)).toEqual(["b", "a"]);
   });
 
-  it("no duplica una partida ya guardada", () => {
+  it("does not duplicate a saved game", () => {
     guardarEnHistorial(partida("a"));
     guardarEnHistorial(partida("a"));
     expect(leer<PartidaTerminada[]>("historial", [])).toHaveLength(1);
   });
 
-  it("guarda como máximo 200 partidas", () => {
+  it("keeps at most 200 games", () => {
     escribir(
       "historial",
       Array.from({ length: 200 }, (_, i) => partida(String(i))),
@@ -67,26 +67,29 @@ describe("guardarEnHistorial", () => {
 });
 
 describe("leerAjustes", () => {
-  it("completa con los valores iniciales lo que falte", () => {
+  it("fills missing values with the defaults", () => {
     escribir("ajustes", { sonido: false });
     expect(leerAjustes()).toEqual({ ...AJUSTES_INICIALES, sonido: false });
   });
 });
 
 describe("fmt", () => {
-  it("separa miles con punto", () => {
+  it("uses the thousands separator of the chosen language", () => {
+    escribir("ajustes", { idioma: "es" });
     expect(fmt(10000)).toBe("10.000");
+    escribir("ajustes", { idioma: "en" });
+    expect(fmt(10000)).toBe("10,000");
   });
 });
 
-describe("hooks de la central", () => {
-  it("useAjustes completa ajustes viejos con los valores nuevos", () => {
+describe("hub hooks", () => {
+  it("useAjustes fills old settings with new defaults", () => {
     escribir("ajustes", { vibracion: false });
     const { result } = renderHook(() => useAjustes());
     expect(result.current[0]).toEqual({ ...AJUSTES_INICIALES, vibracion: false });
   });
 
-  it("useJugadores y useHistorial arrancan vacíos", () => {
+  it("useJugadores and useHistorial start empty", () => {
     expect(renderHook(() => useJugadores()).result.current[0]).toEqual([]);
     expect(renderHook(() => useHistorial()).result.current[0]).toEqual([]);
   });

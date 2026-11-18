@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n";
 import { CATALOGO } from "../juegos/catalogo";
 import { Dado } from "../ui/Dado";
 import { Ajustes } from "./Ajustes";
@@ -7,11 +8,11 @@ import { Jugadores } from "./Jugadores";
 
 type Pestana = "juegos" | "historial" | "jugadores" | "ajustes";
 
-const PESTANAS: { id: Pestana; nombre: string; icono: string }[] = [
-  { id: "juegos", nombre: "Juegos", icono: "⚄" },
-  { id: "historial", nombre: "Historial", icono: "☰" },
-  { id: "jugadores", nombre: "Jugadores", icono: "☺" },
-  { id: "ajustes", nombre: "Ajustes", icono: "⚙" },
+const PESTANAS: { id: Pestana; icono: string }[] = [
+  { id: "juegos", icono: "⚄" },
+  { id: "historial", icono: "☰" },
+  { id: "jugadores", icono: "☺" },
+  { id: "ajustes", icono: "⚙" },
 ];
 
 interface EventoInstalar extends Event {
@@ -20,6 +21,13 @@ interface EventoInstalar extends Event {
 
 export function Central({ abrir }: { abrir: (id: string) => void }) {
   const [pestana, setPestana] = useState<Pestana>("juegos");
+  const t = useT();
+  const nombres: Record<Pestana, string> = {
+    juegos: t.nav.games,
+    historial: t.nav.history,
+    jugadores: t.nav.players,
+    ajustes: t.nav.settings,
+  };
   return (
     <>
       <div className="pantalla con-nav">
@@ -28,7 +36,7 @@ export function Central({ abrir }: { abrir: (id: string) => void }) {
         {pestana === "jugadores" && <Jugadores />}
         {pestana === "ajustes" && <Ajustes />}
       </div>
-      <nav className="nav" aria-label="Secciones">
+      <nav className="nav" aria-label={t.nav.sections}>
         <div>
           {PESTANAS.map((p) => (
             <button
@@ -41,7 +49,7 @@ export function Central({ abrir }: { abrir: (id: string) => void }) {
               <span className="ic" aria-hidden="true">
                 {p.icono}
               </span>
-              {p.nombre}
+              {nombres[p.id]}
             </button>
           ))}
         </div>
@@ -51,6 +59,7 @@ export function Central({ abrir }: { abrir: (id: string) => void }) {
 }
 
 function Juegos({ abrir }: { abrir: (id: string) => void }) {
+  const t = useT();
   const [instalar, setInstalar] = useState<EventoInstalar | null>(null);
   useEffect(() => {
     const alOfrecer = (e: Event) => {
@@ -67,7 +76,7 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
     <>
       <div className="fila" style={{ gap: 10 }}>
         <Dado cara={5} tamano={30} />
-        <h1 className="titulo">Mis juegos</h1>
+        <h1 className="titulo">{t.appName}</h1>
       </div>
 
       {pendientes.map(({ j, resumen }) => (
@@ -80,17 +89,17 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
         >
           <span className="columna" style={{ gap: 2 }}>
             <span className="lbl" style={{ color: "var(--gold)" }}>
-              Continuar
+              {t.home.continue}
             </span>
             <span>
-              {j.nombre} · {resumen}
+              {j.nombre(t)} · {resumen}
             </span>
           </span>
-          <b style={{ color: "var(--gold)" }}>Seguir ›</b>
+          <b style={{ color: "var(--gold)" }}>{t.home.resume}</b>
         </button>
       ))}
 
-      <span className="lbl">Juegos</span>
+      <span className="lbl">{t.home.games}</span>
       <div className="juegos">
         {CATALOGO.map((j) => (
           <button type="button" key={j.id} className="tarjeta-juego" onClick={() => abrir(j.id)}>
@@ -100,26 +109,26 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
               ))}
             </span>
             <span className="grow" />
-            <b>{j.nombre}</b>
+            <b>{j.nombre(t)}</b>
             <span className="dim" style={{ fontSize: 13 }}>
-              {j.descripcion}
+              {j.descripcion(t)}
             </span>
           </button>
         ))}
         {Array.from({ length: Math.max(1, 3 - (CATALOGO.length - 1)) }, (_, i) => (
           <div key={i} className="tarjeta-juego pronto" aria-hidden="true">
             <span className="grow" />
-            <b>Próximo juego</b>
-            <span style={{ fontSize: 13 }}>Pronto</span>
+            <b>{t.common.nextGame}</b>
+            <span style={{ fontSize: 13 }}>{t.common.soon}</span>
           </div>
         ))}
       </div>
 
       {instalar && (
         <div className="tarjeta columna">
-          <b>Instalar Mis juegos</b>
+          <b>{t.home.installTitle}</b>
           <span className="dim" style={{ fontSize: 14 }}>
-            Queda como app en tu teléfono y funciona sin internet.
+            {t.home.installBody}
           </span>
           <button
             type="button"
@@ -129,7 +138,7 @@ function Juegos({ abrir }: { abrir: (id: string) => void }) {
               setInstalar(null);
             }}
           >
-            Instalar
+            {t.home.install}
           </button>
         </div>
       )}

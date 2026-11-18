@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { currentTexts, fmt, useT } from "../../../i18n";
 import { escribir, leer, nuevoId } from "../../../motor/almacen";
 import { semillaNueva } from "../../../motor/azar";
-import { fmt, guardarEnHistorial } from "../../../motor/central";
+import { guardarEnHistorial } from "../../../motor/central";
 import type { Persona } from "../../../motor/tipos";
 import { QuienEmpieza } from "../../../ui/QuienEmpieza";
 import { type EstadoAmbicioso, iniciar } from "../reglas/ambicioso";
 import { NuevaPartida, type Preparacion } from "./NuevaPartida";
 import { Partida } from "./Partida";
 
+/** Storage key for the game in progress (one per game). */
 const CLAVE = "partida:ambicioso";
 
 interface Registro {
@@ -23,7 +25,7 @@ const enCurso = (r: Registro | null): r is Registro =>
 export function resumenPartidaAmbicioso(): string | null {
   const r = leer<Registro | null>(CLAVE, null);
   if (!enCurso(r)) return null;
-  return `le toca a ${r.estado.jugadores[r.estado.turnoDe].nombre}`;
+  return currentTexts().ambicioso.pendingSummary(r.estado.jugadores[r.estado.turnoDe].nombre);
 }
 
 const aPersona = (p: Persona): Persona => ({ id: p.id, nombre: p.nombre, color: p.color });
@@ -37,7 +39,12 @@ function guardarFinal(r: Registro) {
     fecha: new Date().toISOString(),
     jugadores: e.jugadores.map((j) => ({ id: j.id, nombre: j.nombre, color: j.color, puntos: j.puntos })),
     ganadores: e.fase === "ganador" ? e.ganadores : [],
-    detalle: `meta ${e.config.modoMeta === "exacta" ? "exacta " : ""}${fmt(e.config.meta)} · ${e.fase === "ganador" ? `${e.ronda} rondas` : `ronda ${e.ronda}`}`,
+    info: {
+      meta: e.config.meta,
+      exacta: e.config.modoMeta === "exacta",
+      rondas: e.ronda,
+      completa: e.fase === "ganador",
+    },
   });
 }
 
@@ -79,7 +86,7 @@ export function JuegoAmbicioso({ salir }: { salir: () => void }) {
   const revancha = () => {
     if (!registro) return;
     const js = registro.estado.jugadores;
-    // Empieza quien quedó de último, conservando el orden de la mesa.
+    // Whoever came last goes first; seating order is kept.
     const minimo = Math.min(...js.map((j) => j.puntos));
     const ultimo = js.findIndex((j) => j.puntos === minimo);
     comenzar({ ...registro.preparacion, personas: js.map(aPersona) }, ultimo);
@@ -121,7 +128,7 @@ export function JuegoAmbicioso({ salir }: { salir: () => void }) {
       previa={registro?.preparacion}
       salir={salir}
       listo={(prep) => {
-        if (enCurso(registro)) guardar(null); // se descarta la partida a medias
+        if (enCurso(registro)) guardar(null); // discard the unfinished game
         if (prep.modoInicio === "lista") comenzar(prep, 0);
         else setPaso({ t: "quien", prep });
       }}
@@ -140,26 +147,28 @@ function Retomar({
   nueva: () => void;
   salir: () => void;
 }) {
+  const t = useT();
+  const a = t.ambicioso;
   const [confirmar, setConfirmar] = useState(false);
   const e = r.estado;
   const j = e.jugadores[e.turnoDe];
   const hace = Math.round((Date.now() - new Date(r.inicio).getTime()) / 60000);
   const cuando =
     hace < 60
-      ? `hace ${Math.max(1, hace)} min`
+      ? a.minutesAgo(Math.max(1, hace))
       : hace < 1440
-        ? `hace ${Math.round(hace / 60)} h`
-        : `hace ${Math.round(hace / 1440)} días`;
+        ? a.hoursAgo(Math.round(hace / 60))
+        : a.daysAgo(Math.round(hace / 1440));
   return (
     <div className="pantalla">
       <div className="barra">
         <button type="button" className="enlace" onClick={salir}>
-          ‹ Mis juegos
+          {t.common.backToGames}
         </button>
       </div>
-      <h1 className="titulo">Tienes una partida a medias</h1>
+      <h1 className="titulo">{a.resumeTitle}</h1>
       <div className="tarjeta columna">
-        <span className="lbl">Ambicioso · empezó {cuando}</span>
+        <span className="lbl">{a.startedAgo(cuando)}</span>
         {[...e.jugadores]
           .sort((a, b) => b.puntos - a.puntos)
           .map((x) => (
@@ -170,31 +179,31 @@ function Retomar({
             </div>
           ))}
         <span className="dim" style={{ fontSize: 13 }}>
-          Le toca a {j.nombre}
-          {e.fase === "lanzado" ? `, lleva ${fmt(e.acumulado)} en el turno` : ""}
-          {e.fase === "perdio" ? ", acaba de perder su turno" : ""}
+          {a.whoseTurn(j.nombre)}
+          {e.fase === "lanzado" ? a.turnSoFar(fmt(e.acumulado)) : ""}
+          {e.fase === "perdio" ? a.justLost : ""}
         </span>
       </div>
       <span className="grow" />
       <div className="columna">
         <button type="button" className="btn pri" onClick={seguir}>
-          Retomar
+          {a.resume}
         </button>
         {confirmar ? (
           <div className="tarjeta columna">
-            <b>¿Empezar otra? La partida a medias se descarta al empezar la nueva.</b>
+            <b>{a.discardConfirm}</b>
             <div className="fila">
               <button type="button" className="btn borde chico grow" onClick={() => setConfirmar(false)}>
-                Cancelar
+                {t.common.cancel}
               </button>
               <button type="button" className="btn peligro chico grow" onClick={nueva}>
-                Sí, empezar otra
+                {a.discardYes}
               </button>
             </div>
           </div>
         ) : (
           <button type="button" className="btn borde" onClick={() => setConfirmar(true)}>
-            Empezar una nueva
+            {a.newInstead}
           </button>
         )}
       </div>

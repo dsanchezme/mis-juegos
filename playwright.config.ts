@@ -13,10 +13,12 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}/mis-juegos/`,
     trace: "retain-on-failure",
     serviceWorkers: "block",
+    // Spanish by default; english.spec.ts switches the language explicitly.
+    locale: "es-CO",
   },
   projects: [{ name: "pixel-7", use: { ...devices["Pixel 7"] } }],
   webServer: {
-    // Prueba el build de producción, el mismo que se publica.
+    // Tests the production build, the same one that gets deployed.
     command: `npm run build && npx vite preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}/mis-juegos/`,
     reuseExistingServer: !enCI,

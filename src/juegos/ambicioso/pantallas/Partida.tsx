@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { AjustesEfectos } from "../../../central/Ajustes";
-import { fmt, useAjustes } from "../../../motor/central";
+import { fmt, useT } from "../../../i18n";
+import type { Texts } from "../../../i18n/es";
+import { useAjustes } from "../../../motor/central";
 import { agitarDisponible, useAgitar } from "../../../ui/agitar";
 import { Dado } from "../../../ui/Dado";
 import { efectos } from "../../../ui/efectos";
@@ -19,6 +21,7 @@ type Capa = null | "pausa" | "marcador" | "reglas";
 const DURACION_LANZAMIENTO = 700;
 
 export function Partida({ estado: e, actualizar, salir, revancha, nuevaPartida }: Props) {
+  const t = useT();
   const [ajustes] = useAjustes();
   const [rodando, setRodando] = useState(false);
   const [agitando, setAgitando] = useState(false);
@@ -29,10 +32,11 @@ export function Partida({ estado: e, actualizar, salir, revancha, nuevaPartida }
 
   const usarAgitar = ajustes.agitar && agitarDisponible();
 
-  // Al cambiar de turno, volver a la pantalla de relevo.
-  useEffect(() => setListo(false), []);
+  // When the turn changes, go back to the hand-off screen.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: must re-run whenever the turn or round changes.
+  useEffect(() => setListo(false), [e.turnoDe, e.ronda]);
 
-  // Campanazo cuando empieza la última ronda.
+  // Bell when the final round starts.
   useEffect(() => {
     if (e.ultimaRonda && !ultimaRondaPrevia.current && e.fase === "cambioDeTurno") efectos.ultimaRonda();
     ultimaRondaPrevia.current = e.ultimaRonda;
@@ -41,7 +45,7 @@ export function Partida({ estado: e, actualizar, salir, revancha, nuevaPartida }
   const lanzar = () => {
     if (rodando || (e.fase !== "lanzado" && e.fase !== "cambioDeTurno")) return;
     const nuevo = aplicar(e, { tipo: "LANZAR" });
-    actualizar(nuevo); // se guarda antes de mostrar: cerrar la app no evita un sancocho
+    actualizar(nuevo); // saved before it is shown, so closing the app can't undo a bust
     setRodando(true);
     efectos.agitando();
     window.setTimeout(() => {
@@ -105,10 +109,15 @@ export function Partida({ estado: e, actualizar, salir, revancha, nuevaPartida }
             <>
               <div className="barra">
                 <span className="mono" style={{ fontSize: 12 }}>
-                  Ronda {e.ronda} · Meta {e.config.modoMeta === "exacta" ? "exacta " : ""}
-                  {fmt(e.config.meta)}
+                  {t.ambicioso.round(e.ronda)} ·{" "}
+                  {t.ambicioso.targetLabel(e.config.modoMeta === "exacta", fmt(e.config.meta))}
                 </span>
-                <button type="button" className="boton-icono" onClick={() => setCapa("pausa")} aria-label="Pausar">
+                <button
+                  type="button"
+                  className="boton-icono"
+                  onClick={() => setCapa("pausa")}
+                  aria-label={t.common.pause}
+                >
                   ⏸
                 </button>
               </div>
@@ -133,91 +142,101 @@ export function Partida({ estado: e, actualizar, salir, revancha, nuevaPartida }
   );
 }
 
-/* ---------- Piezas ---------- */
+/* ---------- Pieces ---------- */
 
 function Tira({ e, abrir }: { e: EstadoAmbicioso; abrir: () => void }) {
+  const t = useT();
   return (
-    <button type="button" className="tira" onClick={abrir} title="Ver marcador">
+    <button type="button" className="tira" onClick={abrir} aria-label={t.ambicioso.showScores}>
       {e.jugadores.map((j, i) => (
-        <span key={j.id} className={i === e.turnoDe ? "ahora" : ""} style={{ ["--c" as string]: j.color }}>
+        <div key={j.id} className={i === e.turnoDe ? "ahora" : ""} style={{ ["--c" as string]: j.color }}>
           <span>{j.nombre}</span>
           <b>{fmt(j.puntos)}</b>
-        </span>
+        </div>
       ))}
     </button>
   );
 }
 
 function QuienJuega({ e, extra }: { e: EstadoAmbicioso; extra?: React.ReactNode }) {
+  const t = useT();
   const j = e.jugadores[e.turnoDe];
   return (
     <div className="fila">
       <span className="punto" style={{ background: j.color }} />
-      <b>Turno de {j.nombre}</b>
+      <b>{t.ambicioso.turnOf(j.nombre)}</b>
       <span className="grow" />
       {extra}
     </div>
   );
 }
 
-function textoEvento(e: EstadoAmbicioso, ev: Evento) {
-  const j = e.jugadores.find((x) => x.id === ev.jugadorId);
-  if (ev.tipo === "planto") return `${j?.nombre} se plantó con ${fmt(ev.puntos)} → ${fmt(ev.total)}`;
-  if (ev.tipo === "pasado") return `${j?.nombre} se pasó y perdió ${fmt(ev.puntos)}`;
-  return `${j?.nombre} sacó sancocho${ev.puntos ? ` y perdió ${fmt(ev.puntos)}` : ""}`;
+function textoEvento(e: EstadoAmbicioso, ev: Evento, t: Texts) {
+  const nombre = e.jugadores.find((x) => x.id === ev.jugadorId)?.nombre ?? "";
+  if (ev.tipo === "planto") return t.ambicioso.logBanked(nombre, fmt(ev.puntos), fmt(ev.total));
+  if (ev.tipo === "pasado") return t.ambicioso.logOvershot(nombre, fmt(ev.puntos));
+  return t.ambicioso.logBust(nombre, ev.puntos ? fmt(ev.puntos) : null);
 }
 
 function AvisoUltimaRonda({ e }: { e: EstadoAmbicioso }) {
+  const t = useT();
   if (!e.ultimaRonda) return null;
   const quien = e.jugadores.find((j) => j.id === e.quienLlego);
   const restantes = e.jugadores.slice(e.turnoDe).map((j) => j.nombre);
   return (
     <div className="aviso columna" style={{ gap: 2 }}>
-      <span className="lbl">Última ronda</span>
+      <span className="lbl">{t.ambicioso.lastRound}</span>
       <span>
-        {quien?.nombre} llegó a {fmt(quien?.puntos ?? 0)}. {restantes.join(", ").replace(/, ([^,]*)$/, " y $1")}{" "}
-        {restantes.length === 1 ? "tiene" : "tienen"} un último turno.
+        {t.ambicioso.lastRoundBody(
+          quien?.nombre ?? "",
+          fmt(quien?.puntos ?? 0),
+          t.join(restantes),
+          restantes.length > 1,
+        )}
       </span>
     </div>
   );
 }
 
 function Relevo({ e, listo, usarAgitar }: { e: EstadoAmbicioso; listo: () => void; usarAgitar: boolean }) {
+  const t = useT();
+  const a = t.ambicioso;
   const j = e.jugadores[e.turnoDe];
   const ultimo = e.historial.at(-1);
   const detalle = e.ultimaRonda
     ? e.config.modoMeta === "exacta"
-      ? `Tiene ${fmt(j.puntos)} · necesita exactamente ${fmt(necesitaParaGanar(e))}`
-      : `Tiene ${fmt(j.puntos)} · necesita ${fmt(necesitaParaGanar(e))} para quedar de primero`
-    : `Tiene ${fmt(j.puntos)} · le faltan ${fmt(faltante(e))}`;
+      ? a.hasNeedsExact(fmt(j.puntos), fmt(necesitaParaGanar(e)))
+      : a.hasNeedsLead(fmt(j.puntos), fmt(necesitaParaGanar(e)))
+    : a.hasMissing(fmt(j.puntos), fmt(faltante(e)));
   return (
     <>
       <AvisoUltimaRonda e={e} />
       <span className="grow" />
       <div className="relevo" style={{ ["--c" as string]: j.color }}>
         <span className="punto" style={{ background: j.color, width: 20, height: 20 }} />
-        <span className="lbl">Pásale el teléfono a</span>
+        <span className="lbl">{a.passTo}</span>
         <h2>{j.nombre}</h2>
         <span className="dim">{detalle}</span>
       </div>
       <span className="grow" />
       {ultimo && (
         <div className="tarjeta bitacora">
-          <span>Último turno</span>
-          <span style={{ color: "var(--ink)" }}>{textoEvento(e, ultimo)}</span>
+          <span>{a.lastTurn}</span>
+          <span style={{ color: "var(--ink)" }}>{textoEvento(e, ultimo, t)}</span>
         </div>
       )}
       <button type="button" className="btn pri" onClick={listo}>
-        {usarAgitar ? "Estoy listo" : "Estoy listo · lanzar"}
+        {usarAgitar ? a.ready : a.readyRoll}
       </button>
     </>
   );
 }
 
 function ListoParaLanzar({ e, lanzar }: { e: EstadoAmbicioso; lanzar: () => void }) {
+  const t = useT();
   return (
     <>
-      <QuienJuega e={e} extra={<span className="pildora">4 dados</span>} />
+      <QuienJuega e={e} extra={<span className="pildora">{t.ambicioso.dice(4)}</span>} />
       <span className="grow" />
       <div className="columna centro" style={{ textAlign: "center" }}>
         <svg viewBox="0 0 70 110" width="70" height="110" aria-hidden="true" className="agitar-ic">
@@ -230,23 +249,25 @@ function ListoParaLanzar({ e, lanzar }: { e: EstadoAmbicioso; lanzar: () => void
             strokeLinecap="round"
           />
         </svg>
-        <h2 style={{ fontSize: 28 }}>Agita para lanzar</h2>
-        <span className="dim">Los dados caen cuando dejas de agitar.</span>
+        <h2 style={{ fontSize: 28 }}>{t.ambicioso.shakeToRoll}</h2>
+        <span className="dim">{t.ambicioso.shakeHint}</span>
       </div>
       <span className="grow" />
       <button type="button" className="btn borde" onClick={lanzar}>
-        O toca aquí para lanzar
+        {t.ambicioso.tapToRoll}
       </button>
     </>
   );
 }
 
 function Rodando({ e, agitando }: { e: EstadoAmbicioso; agitando: boolean }) {
-  // Mientras rueda, el estado ya tiene el resultado; se muestran caras al azar.
+  // While rolling, the state already holds the result; random faces are shown until it lands.
+  const t = useT();
   const n = agitando ? e.dadosDisponibles : (e.ultimoLanzamiento?.caras.length ?? e.dadosDisponibles);
+  const previo = e.ultimoLanzamiento;
   const apartados = agitando
-    ? e.fase === "lanzado" && e.ultimoLanzamiento && !e.ultimoLanzamiento.manoLlena
-      ? [...e.apartados, ...e.ultimoLanzamiento.caras.filter((_, i) => e.ultimoLanzamiento?.sirven[i])]
+    ? e.fase === "lanzado" && previo && !previo.manoLlena
+      ? [...e.apartados, ...previo.caras.filter((_, i) => previo.sirven[i])]
       : []
     : e.apartados;
   const [caras, setCaras] = useState(() => Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6)));
@@ -259,7 +280,10 @@ function Rodando({ e, agitando }: { e: EstadoAmbicioso; agitando: boolean }) {
   }, [n]);
   return (
     <>
-      <QuienJuega e={e} extra={<span className="pildora">{agitando ? "Agitando…" : "Lanzando…"}</span>} />
+      <QuienJuega
+        e={e}
+        extra={<span className="pildora">{agitando ? t.ambicioso.shaking : t.ambicioso.rolling}</span>}
+      />
       <span className="grow" />
       <div className="bandeja">
         <div className="apartados">
@@ -297,6 +321,8 @@ function Turno({
   plantarse: () => void;
   usarAgitar: boolean;
 }) {
+  const t = useT();
+  const a = t.ambicioso;
   const j = e.jugadores[e.turnoDe];
   const l = e.ultimoLanzamiento;
   if (!l) return null;
@@ -305,7 +331,7 @@ function Turno({
   const llega = e.config.modoMeta === "llegarOPasar" && total >= e.config.meta && !e.ultimaRonda;
   return (
     <>
-      <QuienJuega e={e} extra={<span className="pildora">Lanzamiento {e.numeroLanzamiento}</span>} />
+      <QuienJuega e={e} extra={<span className="pildora">{a.rollN(e.numeroLanzamiento)}</span>} />
       <AvisoUltimaRonda e={e} />
       <div className="bandeja">
         <div className="apartados">
@@ -321,8 +347,8 @@ function Turno({
           ))}
         </div>
         <span className="pildora oro">
-          +{fmt(l.puntos)} · {l.partes.join(" + ")}
-          {l.manoLlena && " · ¡mano llena!"}
+          +{fmt(l.puntos)} · {l.partes.map((p) => a.part(p, fmt)).join(" + ")}
+          {l.manoLlena && ` · ${a.hotDice}`}
         </span>
       </div>
       <div className="columna centro" style={{ textAlign: "center", gap: 2 }}>
@@ -331,25 +357,24 @@ function Turno({
           {fmt(e.acumulado)}
         </span>
         <span className="dim" style={{ fontSize: 14 }}>
-          {l.manoLlena ? "Todos sumaron: recuperas los 4 dados. " : ""}
-          Si te plantas: {fmt(j.puntos)} → {fmt(total)}
+          {l.manoLlena ? a.hotDiceBody : ""}
+          {a.ifYouBank(fmt(j.puntos), fmt(total))}
         </span>
-        {justo && <span style={{ color: "var(--gold)", fontWeight: 700 }}>¡Justo la meta! Plántate para ganar.</span>}
-        {llega && <span style={{ color: "var(--gold)", fontWeight: 700 }}>Si te plantas alcanzas la meta.</span>}
+        {justo && <span style={{ color: "var(--gold)", fontWeight: 700 }}>{a.exactHit}</span>}
+        {llega && <span style={{ color: "var(--gold)", fontWeight: 700 }}>{a.reachesTarget}</span>}
         {e.config.modoMeta === "exacta" && !justo && (
           <span className="dim" style={{ fontSize: 13 }}>
-            Te faltarían {fmt(e.config.meta - total)} para la meta exacta.
+            {a.exactMissing(fmt(e.config.meta - total))}
           </span>
         )}
       </div>
       <span className="grow" />
       <div className="columna">
         <button type="button" className={`btn ${justo ? "sec" : "pri"}`} onClick={lanzar}>
-          Seguir · {usarAgitar ? "agita o toca para" : ""} lanzar {e.dadosDisponibles}{" "}
-          {e.dadosDisponibles === 1 ? "dado" : "dados"}
+          {a.keepRolling(e.dadosDisponibles, usarAgitar)}
         </button>
         <button type="button" className={`btn ${justo ? "pri" : "sec"}`} onClick={plantarse}>
-          Plantarme y anotar {fmt(e.acumulado)}
+          {a.bank(fmt(e.acumulado))}
         </button>
       </div>
     </>
@@ -357,6 +382,8 @@ function Turno({
 }
 
 function Perdio({ e, pasar }: { e: EstadoAmbicioso; pasar: () => void }) {
+  const t = useT();
+  const a = t.ambicioso;
   const j = e.jugadores[e.turnoDe];
   const l = e.ultimoLanzamiento;
   if (!l) return null;
@@ -379,9 +406,7 @@ function Perdio({ e, pasar }: { e: EstadoAmbicioso; pasar: () => void }) {
           🍲
         </div>
       )}
-      <h1 style={{ textAlign: "center", fontSize: 44, color: "var(--bust)" }}>
-        {pasado ? "¡Te pasaste!" : "¡Sancocho!"}
-      </h1>
+      <h1 style={{ textAlign: "center", fontSize: 44, color: "var(--bust)" }}>{pasado ? a.overshot : a.bust}</h1>
       {e.perdido > 0 && (
         <div className="tachado" style={{ textAlign: "center" }}>
           {fmt(e.perdido)}
@@ -389,12 +414,12 @@ function Perdio({ e, pasar }: { e: EstadoAmbicioso; pasar: () => void }) {
       )}
       <p className="dim" style={{ textAlign: "center", margin: 0 }}>
         {pasado
-          ? `Tenías ${fmt(j.puntos)} + ${fmt(e.perdido)} acumulados. Este lanzamiento te llevaba a ${fmt(j.puntos + e.perdido + l.puntos)}. ${j.nombre} se queda con ${fmt(j.puntos)}.`
-          : `Ningún dado sirvió. ${j.nombre} se queda con ${fmt(j.puntos)}.`}
+          ? a.overshotBody(fmt(j.puntos), fmt(e.perdido), fmt(j.puntos + e.perdido + l.puntos), j.nombre)
+          : a.bustBody(j.nombre, fmt(j.puntos))}
       </p>
       <span className="grow" />
       <button type="button" className="btn peligro" onClick={pasar}>
-        {fin ? "Ver quién ganó" : `Pasar el turno a ${e.jugadores[siguiente].nombre}`}
+        {fin ? a.seeWinner : a.passTurn(e.jugadores[siguiente].nombre)}
       </button>
     </>
   );
@@ -411,6 +436,8 @@ function Ganador({
   salir: () => void;
   nuevaPartida: () => void;
 }) {
+  const t = useT();
+  const a = t.ambicioso;
   useEffect(() => efectos.ganador(), []);
   const ganadores = e.jugadores.filter((g) => e.ganadores.includes(g.id));
   const resto = [...e.jugadores].filter((j) => !e.ganadores.includes(j.id)).sort((a, b) => b.puntos - a.puntos);
@@ -420,20 +447,14 @@ function Ganador({
       <div className="confeti" />
       <span className="grow" />
       <div className="columna centro" style={{ textAlign: "center", gap: 6, position: "relative" }}>
-        <span className="lbl">Fin de la ronda {e.ronda}</span>
+        <span className="lbl">{a.endOfRound(e.ronda)}</span>
         <h1 style={{ fontSize: ganadores.length > 1 ? 40 : 50, color: g.color }}>
-          {ganadores.length === 1
-            ? `¡${g.nombre} gana!`
-            : `¡Empate! Ganan ${ganadores.map((x) => x.nombre).join(" y ")}`}
+          {ganadores.length === 1 ? a.wins(g.nombre) : a.tieWin(t.join(ganadores.map((x) => x.nombre)))}
         </h1>
         <span className="grande" style={{ fontSize: 44 }}>
           {fmt(g.puntos)}
         </span>
-        {ganadores.length === 1 && (
-          <span className="dim">
-            {g.turnos} turnos · su mejor turno: {fmt(g.mejorTurno)}
-          </span>
-        )}
+        {ganadores.length === 1 && <span className="dim">{a.winnerStats(g.turnos, fmt(g.mejorTurno))}</span>}
       </div>
       <div className="ranking" style={{ position: "relative" }}>
         {resto.map((j, i) => (
@@ -448,20 +469,20 @@ function Ganador({
       <span className="grow" />
       <div className="columna">
         <button type="button" className="btn pri" onClick={revancha}>
-          Revancha (mismos jugadores)
+          {a.rematch}
         </button>
         <button type="button" className="btn borde" onClick={nuevaPartida}>
-          Cambiar jugadores o meta
+          {a.changeSetup}
         </button>
         <button type="button" className="btn borde" onClick={salir}>
-          Volver a Mis juegos
+          {a.backHome}
         </button>
       </div>
     </>
   );
 }
 
-/* ---------- Capas ---------- */
+/* ---------- Overlays ---------- */
 
 function Pausa({
   e,
@@ -476,35 +497,35 @@ function Pausa({
   salir: () => void;
   terminar: () => void;
 }) {
+  const t = useT();
+  const a = t.ambicioso;
   const [confirmar, setConfirmar] = useState(false);
   const [efectosAbiertos, setEfectosAbiertos] = useState(false);
   const j = e.jugadores[e.turnoDe];
   return (
-    <div className="capa" role="dialog" aria-label="Partida en pausa">
+    <div className="capa" role="dialog" aria-label={a.paused}>
       <div className="pantalla">
         <div className="barra">
           <span className="mono" style={{ fontSize: 12 }}>
-            Ronda {e.ronda} · Meta {fmt(e.config.meta)}
+            {a.round(e.ronda)} · {a.targetLabel(e.config.modoMeta === "exacta", fmt(e.config.meta))}
           </span>
         </div>
-        <h1 className="titulo">Partida en pausa</h1>
+        <h1 className="titulo">{a.paused}</h1>
         <div className="tarjeta columna" style={{ gap: 2 }}>
-          <span className="lbl">Turno de {j.nombre}</span>
+          <span className="lbl">{a.pausedTurn(j.nombre)}</span>
           <span>
-            {e.fase === "lanzado"
-              ? `Acumulado ${fmt(e.acumulado)} · quedan ${e.dadosDisponibles} ${e.dadosDisponibles === 1 ? "dado" : "dados"}`
-              : "Todavía no ha lanzado"}
+            {e.fase === "lanzado" ? a.pausedProgress(fmt(e.acumulado), a.dice(e.dadosDisponibles)) : a.notRolledYet}
           </span>
         </div>
         <div className="columna">
           <button type="button" className="btn pri" onClick={cerrar}>
-            Seguir jugando
+            {a.keepPlaying}
           </button>
           <button type="button" className="btn sec" onClick={() => abrir("marcador")}>
-            Ver marcador
+            {a.showScores}
           </button>
           <button type="button" className="btn sec" onClick={() => abrir("reglas")}>
-            Reglas
+            {a.rules}
           </button>
           <button
             type="button"
@@ -512,32 +533,32 @@ function Pausa({
             onClick={() => setEfectosAbiertos((v) => !v)}
             aria-expanded={efectosAbiertos}
           >
-            Sonido y vibración
+            {a.soundVibration}
           </button>
           {efectosAbiertos && <AjustesEfectos />}
           <button type="button" className="btn borde" onClick={salir}>
-            Salir (queda guardada)
+            {a.exitSaved}
           </button>
         </div>
         <span className="grow" />
         {confirmar ? (
           <div className="tarjeta columna">
-            <b>¿Terminar la partida sin ganador?</b>
+            <b>{a.endConfirm}</b>
             <span className="dim" style={{ fontSize: 14 }}>
-              Quedará en el historial como terminada sin ganador.
+              {a.endDetail}
             </span>
             <div className="fila">
               <button type="button" className="btn borde chico grow" onClick={() => setConfirmar(false)}>
-                Cancelar
+                {t.common.cancel}
               </button>
               <button type="button" className="btn peligro chico grow" onClick={terminar}>
-                Terminar
+                {a.end}
               </button>
             </div>
           </div>
         ) : (
           <button type="button" className="btn peligro-borde" onClick={() => setConfirmar(true)}>
-            Terminar partida sin ganador
+            {a.endNoWinner}
           </button>
         )}
       </div>
@@ -546,20 +567,21 @@ function Pausa({
 }
 
 function Marcador({ e, cerrar }: { e: EstadoAmbicioso; cerrar: () => void }) {
+  const t = useT();
+  const a = t.ambicioso;
   const orden = [...e.jugadores].sort((a, b) => b.puntos - a.puntos);
   return (
-    <div className="capa" role="dialog" aria-label="Marcador">
+    <div className="capa" role="dialog" aria-label={a.scoreboard}>
       <div className="pantalla">
         <div className="barra">
           <button type="button" className="enlace" onClick={cerrar}>
-            ‹ Volver al juego
+            {a.backToGame}
           </button>
           <span className="mono" style={{ fontSize: 12 }}>
-            Meta {e.config.modoMeta === "exacta" ? "exacta " : ""}
-            {fmt(e.config.meta)}
+            {a.targetLabel(e.config.modoMeta === "exacta", fmt(e.config.meta))}
           </span>
         </div>
-        <h1 className="titulo">Marcador</h1>
+        <h1 className="titulo">{a.scoreboard}</h1>
         <div className="ranking">
           {orden.map((j, i) => (
             <div key={j.id} className="r">
@@ -573,12 +595,12 @@ function Marcador({ e, cerrar }: { e: EstadoAmbicioso; cerrar: () => void }) {
             </div>
           ))}
         </div>
-        <span className="lbl">Historial</span>
+        <span className="lbl">{a.log}</span>
         <div className="tarjeta bitacora">
-          {e.historial.length === 0 && <span>Todavía no hay turnos.</span>}
+          {e.historial.length === 0 && <span>{a.noTurns}</span>}
           {[...e.historial].reverse().map((ev, i) => (
             <span key={i} style={{ color: ev.tipo === "planto" ? undefined : "var(--bust)" }}>
-              R{ev.ronda} · {textoEvento(e, ev)}
+              {a.roundShort(ev.ronda)} · {textoEvento(e, ev, t)}
             </span>
           ))}
         </div>
@@ -588,34 +610,21 @@ function Marcador({ e, cerrar }: { e: EstadoAmbicioso; cerrar: () => void }) {
 }
 
 function Reglas({ cerrar }: { cerrar: () => void }) {
+  const t = useT();
+  const a = t.ambicioso;
   return (
-    <div className="capa" role="dialog" aria-label="Reglas">
+    <div className="capa" role="dialog" aria-label={a.rules}>
       <div className="pantalla reglas">
         <div className="barra">
           <button type="button" className="enlace" onClick={cerrar}>
-            ‹ Volver
+            {t.common.back}
           </button>
         </div>
-        <h1 className="titulo">Reglas de Ambicioso</h1>
+        <h1 className="titulo">{a.rulesTitle}</h1>
         <ul>
-          <li>Se lanzan 4 dados. Cada 1 vale 100 y cada 5 vale 50.</li>
-          <li>Tres iguales valen el número × 100 (tres 4 = 400). Tres 1 valen 1.000.</li>
-          <li>Cuatro iguales valen el número × 1.000. Cuatro 1 valen 10.000.</li>
-          <li>
-            Los tríos y pókeres cuentan solo si salen en el mismo lanzamiento. Todos los dados que suman se apartan.
-          </li>
-          <li>
-            Después de cada lanzamiento decides: plantarte y anotar lo acumulado, o seguir con los dados que quedan.
-          </li>
-          <li>
-            Si ningún dado sirve es <b>sancocho</b>: pierdes todo lo acumulado en el turno.
-          </li>
-          <li>Si todos los dados que lanzaste sumaron (mano llena), vuelves a tener los 4.</li>
-          <li>Con meta exacta, si te pasas de la meta pierdes lo acumulado en el turno.</li>
-          <li>
-            Cuando alguien alcanza la meta, se termina la ronda. Gana quien tenga más puntos; si hay empate, ganan los
-            empatados.
-          </li>
+          {a.rulesList.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
         </ul>
       </div>
     </div>

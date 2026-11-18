@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { NOMBRES_INICIO } from "../../../central/Ajustes";
-import { crearPersona, fmt, type ModoInicio, tieneTactil, useAjustes, useJugadores } from "../../../motor/central";
+import { MODOS_INICIO, nombreInicio } from "../../../central/Ajustes";
+import { fmt, useT } from "../../../i18n";
+import { crearPersona, type ModoInicio, tieneTactil, useAjustes, useJugadores } from "../../../motor/central";
 import type { Persona } from "../../../motor/tipos";
 import type { ConfigAmbicioso, ModoMeta } from "../reglas/ambicioso";
 
@@ -19,6 +20,8 @@ interface Props {
 }
 
 export function NuevaPartida({ previa, listo, salir }: Props) {
+  const t = useT();
+  const a = t.ambicioso;
   const [libreta, setLibreta] = useJugadores();
   const [ajustes] = useAjustes();
   const [elegidos, setElegidos] = useState<string[]>(() => previa?.personas.map((p) => p.id) ?? []);
@@ -55,22 +58,20 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
 
   const metaValida = Number.isFinite(meta) && meta >= 50 && meta % 50 === 0;
   const puede = seleccion.length >= 2 && metaValida;
-  const modos: ModoInicio[] = tieneTactil()
-    ? ["dedos", "ruleta", "duelo", "azar", "lista"]
-    : ["ruleta", "duelo", "azar", "lista"];
+  const modos: ModoInicio[] = tieneTactil() ? MODOS_INICIO : MODOS_INICIO.filter((m) => m !== "dedos");
 
   return (
     <div className="pantalla">
       <div className="barra">
         <button type="button" className="enlace" onClick={salir}>
-          ‹ Mis juegos
+          {t.common.backToGames}
         </button>
-        <span>Ambicioso</span>
+        <span>{a.name}</span>
         <span style={{ width: 50 }} />
       </div>
-      <h1 className="titulo">Nueva partida</h1>
+      <h1 className="titulo">{a.newGame}</h1>
 
-      <span className="lbl">¿Quién juega hoy?</span>
+      <span className="lbl">{a.whoPlays}</span>
       {seleccion.length > 0 && (
         <div className="columna" style={{ gap: 6 }}>
           {seleccion.map((p, i) => (
@@ -82,7 +83,7 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
                 className="boton-icono"
                 onClick={() => mover(i, -1)}
                 disabled={i === 0}
-                aria-label={`Subir a ${p.nombre}`}
+                aria-label={a.moveUp(p.nombre)}
               >
                 ↑
               </button>
@@ -91,7 +92,7 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
                 className="boton-icono"
                 onClick={() => mover(i, 1)}
                 disabled={i === seleccion.length - 1}
-                aria-label={`Bajar a ${p.nombre}`}
+                aria-label={a.moveDown(p.nombre)}
               >
                 ↓
               </button>
@@ -99,7 +100,7 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
                 type="button"
                 className="boton-icono"
                 onClick={() => alternar(p.id)}
-                aria-label={`Quitar a ${p.nombre}`}
+                aria-label={t.players.removeLabel(p.nombre)}
               >
                 ✕
               </button>
@@ -126,22 +127,22 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
         <input
           id="np-nombre"
           className="campo"
-          placeholder="Agregar a alguien nuevo"
+          placeholder={a.addNew}
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           maxLength={20}
         />
         <button className="btn sec chico" type="submit" disabled={!nombre.trim()}>
-          Agregar
+          {t.common.add}
         </button>
       </form>
       {seleccion.length === 1 && (
         <span className="dim" style={{ fontSize: 14 }}>
-          Falta al menos un jugador más.
+          {a.oneMore}
         </span>
       )}
 
-      <span className="lbl">Meta</span>
+      <span className="lbl">{a.target}</span>
       <div className="chips">
         {METAS.map((m) => (
           <button
@@ -157,7 +158,7 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
           </button>
         ))}
         <button type="button" className={`chip ${otraMeta ? "on" : ""}`} onClick={() => setOtraMeta(true)}>
-          Otra…
+          {a.other}
         </button>
       </div>
       {otraMeta && (
@@ -172,11 +173,7 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
             value={Number.isFinite(meta) ? meta : ""}
             onChange={(e) => setMeta(parseInt(e.target.value, 10))}
           />
-          {!metaValida && (
-            <span style={{ color: "var(--bust)", fontSize: 13 }}>
-              La meta debe ser un múltiplo de 50, por ejemplo 2.500.
-            </span>
-          )}
+          {!metaValida && <span style={{ color: "var(--bust)", fontSize: 13 }}>{a.invalidTarget}</span>}
         </div>
       )}
       <div className="chips">
@@ -185,24 +182,21 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
           className={`chip ${modoMeta === "llegarOPasar" ? "on" : ""}`}
           onClick={() => setModoMeta("llegarOPasar")}
         >
-          Llegar o pasar
+          {a.reachOrPass}
         </button>
         <button
           type="button"
           className={`chip ${modoMeta === "exacta" ? "on" : ""}`}
           onClick={() => setModoMeta("exacta")}
         >
-          Exacta
+          {a.exact}
         </button>
       </div>
       <span className="dim" style={{ fontSize: 13 }}>
-        {modoMeta === "exacta"
-          ? "Hay que llegar justo a la meta. Si te pasas, pierdes lo acumulado en el turno."
-          : "Basta con llegar a la meta o pasarla."}{" "}
-        Al alcanzarla, se termina la ronda.
+        {modoMeta === "exacta" ? a.exactHint : a.reachHint} {a.roundEndsHint}
       </span>
 
-      <span className="lbl">¿Quién empieza?</span>
+      <span className="lbl">{a.whoStarts}</span>
       <div className="chips">
         {modos.map((m) => (
           <button
@@ -211,7 +205,7 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
             className={`chip ${modoInicio === m ? "on" : ""}`}
             onClick={() => setModoInicio(m)}
           >
-            {NOMBRES_INICIO[m]}
+            {nombreInicio(t, m)}
           </button>
         ))}
       </div>
@@ -223,7 +217,7 @@ export function NuevaPartida({ previa, listo, salir }: Props) {
         disabled={!puede}
         onClick={() => listo({ personas: seleccion, config: { meta, modoMeta }, modoInicio })}
       >
-        Empezar
+        {a.start}
       </button>
     </div>
   );

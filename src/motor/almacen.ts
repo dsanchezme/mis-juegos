@@ -16,12 +16,12 @@ export function escribir<T>(clave: string, valor: T | null): void {
     if (valor === null) localStorage.removeItem(PREFIJO + clave);
     else localStorage.setItem(PREFIJO + clave, JSON.stringify(valor));
   } catch {
-    /* sin almacenamiento disponible: se juega igual, sin guardar */
+    /* storage unavailable: the game still works, it just is not saved */
   }
   window.dispatchEvent(new CustomEvent("mis-juegos:almacen", { detail: clave }));
 }
 
-/** Estado de React respaldado en el almacenamiento del teléfono. */
+/** React state backed by the device's local storage. */
 export function useAlmacen<T>(clave: string, porDefecto: T): [T, (v: T | ((previo: T) => T)) => void] {
   const [valor, setValor] = useState<T>(() => leer(clave, porDefecto));
 

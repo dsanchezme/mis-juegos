@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useT } from "../i18n";
 import { COLORES, crearPersona, useHistorial, useJugadores } from "../motor/central";
 
 export function Jugadores() {
+  const t = useT();
   const [personas, setPersonas] = useJugadores();
   const [historial] = useHistorial();
   const [nombre, setNombre] = useState("");
@@ -22,10 +24,9 @@ export function Jugadores() {
 
   return (
     <>
-      <h1 className="titulo">Jugadores</h1>
+      <h1 className="titulo">{t.players.title}</h1>
       <p className="dim" style={{ margin: 0 }}>
-        Las personas con las que has jugado, para no escribir el nombre cada vez. Al crear una partida eliges quién
-        juega hoy.
+        {t.players.intro}
       </p>
       <div className="columna">
         {personas.map((p) => (
@@ -35,19 +36,19 @@ export function Jugadores() {
               className="muestra"
               style={{ background: p.color }}
               onClick={() => cambiarColor(p.id)}
-              aria-label={`Cambiar color de ${p.nombre}`}
+              aria-label={t.players.changeColor(p.nombre)}
             />
             <input
               className="nombre campo"
               style={{ border: "none", padding: "4px 0", background: "transparent" }}
               value={p.nombre}
               onChange={(e) => renombrar(p.id, e.target.value)}
-              onBlur={(e) => !e.target.value.trim() && renombrar(p.id, "Sin nombre")}
-              aria-label="Nombre"
+              onBlur={(e) => !e.target.value.trim() && renombrar(p.id, t.players.unnamed)}
+              aria-label={t.common.name}
               id={`nombre-${p.id}`}
             />
             <span className="mono dim" style={{ fontSize: 12 }}>
-              {partidas(p.id)} {partidas(p.id) === 1 ? "partida" : "partidas"}
+              {t.players.games(partidas(p.id))}
             </span>
             {borrando === p.id ? (
               <button
@@ -58,23 +59,21 @@ export function Jugadores() {
                   setBorrando(null);
                 }}
               >
-                Quitar
+                {t.common.remove}
               </button>
             ) : (
               <button
                 type="button"
                 className="boton-icono"
                 onClick={() => setBorrando(p.id)}
-                aria-label={`Quitar a ${p.nombre}`}
+                aria-label={t.players.removeLabel(p.nombre)}
               >
                 ✕
               </button>
             )}
           </div>
         ))}
-        {personas.length === 0 && (
-          <div className="tarjeta dim">Todavía no hay jugadores. Agrega el primero aquí o al crear una partida.</div>
-        )}
+        {personas.length === 0 && <div className="tarjeta dim">{t.players.empty}</div>}
       </div>
       <form
         className="fila"
@@ -86,13 +85,13 @@ export function Jugadores() {
         <input
           id="nuevo-jugador"
           className="campo"
-          placeholder="Nombre"
+          placeholder={t.common.name}
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           maxLength={20}
         />
         <button className="btn sec chico" type="submit" disabled={!nombre.trim()}>
-          Agregar
+          {t.common.add}
         </button>
       </form>
     </>

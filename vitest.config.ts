@@ -8,7 +8,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json-summary"],
-      // La lógica pura (reglas y motor) es lo que debe estar cubierto; las pantallas se prueban de punta a punta.
+      // Pure logic (rules and engine) must be covered; screens are tested end to end.
       include: ["src/juegos/*/reglas/**", "src/motor/**"],
       exclude: ["**/*.test.*", "src/motor/tipos.ts"],
       thresholds: { lines: 90, functions: 90, branches: 85, statements: 90 },

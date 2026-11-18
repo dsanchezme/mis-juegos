@@ -1,17 +1,20 @@
 import { useState } from "react";
+import { fmt, useT } from "../i18n";
+import type { Texts } from "../i18n/es";
 import { CATALOGO } from "../juegos/catalogo";
-import { fmt, useHistorial } from "../motor/central";
+import { useHistorial } from "../motor/central";
 
-const fecha = (iso: string) => {
+const fecha = (iso: string, t: Texts) => {
   const d = new Date(iso);
   const hoy = new Date();
   const ayer = new Date(Date.now() - 864e5);
-  if (d.toDateString() === hoy.toDateString()) return "Hoy";
-  if (d.toDateString() === ayer.toDateString()) return "Ayer";
-  return d.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+  if (d.toDateString() === hoy.toDateString()) return t.history.today;
+  if (d.toDateString() === ayer.toDateString()) return t.history.yesterday;
+  return d.toLocaleDateString(t.locale, { day: "numeric", month: "short" });
 };
 
 export function Historial() {
+  const t = useT();
   const [historial] = useHistorial();
   const [abierta, setAbierta] = useState<string | null>(null);
 
@@ -28,27 +31,28 @@ export function Historial() {
 
   return (
     <>
-      <h1 className="titulo">Historial</h1>
+      <h1 className="titulo">{t.history.title}</h1>
       {ranking.length > 0 && (
         <div className="chips">
           {ranking.map((r, i) => (
             <span key={r.nombre + i} className={`pildora ${i === 0 ? "oro" : ""}`}>
-              {r.nombre} · {r.n} {r.n === 1 ? "victoria" : "victorias"}
+              {r.nombre} · {t.history.wins(r.n)}
             </span>
           ))}
         </div>
       )}
-      {historial.length === 0 && <div className="tarjeta dim">Aquí aparecerán las partidas terminadas.</div>}
+      {historial.length === 0 && <div className="tarjeta dim">{t.history.empty}</div>}
       <div className="columna">
         {historial.map((h) => {
           const ganadores = h.jugadores.filter((j) => h.ganadores.includes(j.id));
-          const juego = CATALOGO.find((c) => c.id === h.juego)?.nombre ?? h.juego;
+          const entrada = CATALOGO.find((c) => c.id === h.juego);
+          const juego = entrada ? entrada.nombre(t) : h.juego;
           const titulo =
             ganadores.length === 0
-              ? "Terminada sin ganador"
+              ? t.history.noWinner
               : ganadores.length === 1
-                ? `${ganadores[0].nombre} ganó`
-                : `Empate: ${ganadores.map((g) => g.nombre).join(" y ")}`;
+                ? t.history.won(ganadores[0].nombre)
+                : t.history.tie(t.join(ganadores.map((g) => g.nombre)));
           return (
             <button
               type="button"
@@ -73,7 +77,8 @@ export function Historial() {
                 </span>
               </span>
               <span className="dim" style={{ fontSize: 12 }}>
-                {fecha(h.fecha)} · {juego} · {h.jugadores.map((j) => j.nombre).join(", ")} · {h.detalle}
+                {fecha(h.fecha, t)} · {juego} · {h.jugadores.map((j) => j.nombre).join(", ")} ·{" "}
+                {entrada && h.info ? entrada.describir(h.info, t) : ""}
               </span>
               {abierta === h.id && (
                 <span className="columna" style={{ marginTop: 8, gap: 4 }}>
