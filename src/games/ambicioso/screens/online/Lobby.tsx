@@ -1,19 +1,12 @@
 import { useState } from "react";
 import { fmt, useT } from "../../../../i18n";
-import {
-  act,
-  addSeatWithFreeColor,
-  leaveRoom,
-  OnlineFailure,
-  type RoomSnapshot,
-  removeSeat,
-  updateConfig,
-} from "../../../../online/api";
+import { act, addSeatWithFreeColor, leaveRoom, OnlineFailure, removeSeat, updateConfig } from "../../../../online/api";
 import { type OnlineError, toOnlineError } from "../../../../online/errors";
 import { formatCode, joinLink } from "../../../../online/lobby";
 import { MIN_PLAYERS } from "../../../../online/roomAction";
 import { useRoom } from "../../../../online/useRoom";
 import type { AmbiciosoConfig } from "../../rules/ambicioso";
+import { OnlineGame } from "./OnlineGame";
 
 const TARGETS = [3000, 5000, 10000];
 const MAX_SEATS = 8;
@@ -92,8 +85,8 @@ export function Lobby({ roomId, code, left, exit }: Props) {
   const hostSeat = active.find((s) => s.user_id === hostId);
   const hostName = hostSeat?.name ?? "";
 
-  if (room.status !== "lobby") {
-    return <InProgress snapshot={view.snapshot} watching={myRole === "spectator"} header={header} />;
+  if (room.status !== "lobby" && room.state) {
+    return <OnlineGame roomId={roomId} view={view} snapshot={view.snapshot} left={left} exit={exit} />;
   }
 
   const setConfig = (config: AmbiciosoConfig) => run(() => updateConfig(roomId, config));
@@ -263,36 +256,5 @@ function AddPlayer({ add, disabled }: { add: (name: string) => Promise<void>; di
         {t.common.add}
       </button>
     </form>
-  );
-}
-
-/** Placeholder until the online game screen lands: shows who is playing. */
-function InProgress({
-  snapshot,
-  watching,
-  header,
-}: {
-  snapshot: RoomSnapshot;
-  watching: boolean;
-  header: React.ReactNode;
-}) {
-  const o = useT().online;
-  const players = snapshot.room.state?.game.players ?? [];
-  return (
-    <div className="screen">
-      {header}
-      <h1 className="title">{o.inProgressTitle}</h1>
-      <ul className="column plain-list" style={{ gap: 6 }}>
-        {players.map((p) => (
-          <li key={p.id} className="person">
-            <span className="dot" style={{ background: p.color }} />
-            <span className="name">{p.name}</span>
-            <b className="mono">{fmt(p.points)}</b>
-          </li>
-        ))}
-      </ul>
-      {watching && <p className="dim">{o.watching}</p>}
-      <p className="dim">{o.inProgressBody}</p>
-    </div>
   );
 }

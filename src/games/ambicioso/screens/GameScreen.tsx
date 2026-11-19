@@ -18,7 +18,7 @@ interface Props {
 
 type Overlay = null | "pause" | "scoreboard" | "rules";
 
-const ROLL_DURATION = 700;
+export const ROLL_DURATION = 700;
 
 export function GameScreen({ state: e, update, exit, rematch, onNewGame }: Props) {
   const t = useT();
@@ -86,7 +86,19 @@ export function GameScreen({ state: e, update, exit, rematch, onNewGame }: Props
 
   let content: React.ReactNode;
   if (e.phase === "winner") {
-    content = <Winner e={e} rematch={rematch} exit={exit} onNewGame={onNewGame} />;
+    content = (
+      <Winner e={e}>
+        <button type="button" className="btn pri" onClick={rematch}>
+          {t.ambicioso.rematch}
+        </button>
+        <button type="button" className="btn outlined" onClick={onNewGame}>
+          {t.ambicioso.changeSetup}
+        </button>
+        <button type="button" className="btn outlined" onClick={exit}>
+          {t.ambicioso.backHome}
+        </button>
+      </Winner>
+    );
   } else if (rolling || shaking) {
     content = <Rolling e={e} shaking={shaking && !rolling} />;
   } else if (e.phase === "handOff" && !ready) {
@@ -144,7 +156,7 @@ export function GameScreen({ state: e, update, exit, rematch, onNewGame }: Props
 
 /* ---------- Pieces ---------- */
 
-function ScoreStrip({ e, open }: { e: AmbiciosoState; open: () => void }) {
+export function ScoreStrip({ e, open }: { e: AmbiciosoState; open: () => void }) {
   const t = useT();
   return (
     <button type="button" className="strip" onClick={open} aria-label={t.ambicioso.showScores}>
@@ -158,7 +170,7 @@ function ScoreStrip({ e, open }: { e: AmbiciosoState; open: () => void }) {
   );
 }
 
-function CurrentPlayer({ e, extra }: { e: AmbiciosoState; extra?: React.ReactNode }) {
+export function CurrentPlayer({ e, extra }: { e: AmbiciosoState; extra?: React.ReactNode }) {
   const t = useT();
   const j = e.players[e.turnIndex];
   return (
@@ -171,7 +183,7 @@ function CurrentPlayer({ e, extra }: { e: AmbiciosoState; extra?: React.ReactNod
   );
 }
 
-function eventText(e: AmbiciosoState, ev: TurnEvent, t: Texts) {
+export function eventText(e: AmbiciosoState, ev: TurnEvent, t: Texts) {
   const name = e.players.find((x) => x.id === ev.playerId)?.name ?? "";
   if (ev.type === "banked") return t.ambicioso.logBanked(name, fmt(ev.points), fmt(ev.total));
   if (ev.type === "overshot") return t.ambicioso.logOvershot(name, fmt(ev.points));
@@ -179,7 +191,7 @@ function eventText(e: AmbiciosoState, ev: TurnEvent, t: Texts) {
   return t.ambicioso.logBust(name, ev.points ? fmt(ev.points) : null);
 }
 
-function FinalRoundNotice({ e }: { e: AmbiciosoState }) {
+export function FinalRoundNotice({ e }: { e: AmbiciosoState }) {
   const t = useT();
   if (!e.finalRound) return null;
   const who = e.players.find((j) => j.id === e.reachedBy);
@@ -194,7 +206,7 @@ function FinalRoundNotice({ e }: { e: AmbiciosoState }) {
   );
 }
 
-function HandOff({ e, ready, shakeEnabled }: { e: AmbiciosoState; ready: () => void; shakeEnabled: boolean }) {
+export function HandOff({ e, ready, shakeEnabled }: { e: AmbiciosoState; ready: () => void; shakeEnabled: boolean }) {
   const t = useT();
   const a = t.ambicioso;
   const j = e.players[e.turnIndex];
@@ -327,24 +339,7 @@ function Turn({
     <>
       <CurrentPlayer e={e} extra={<span className="pill">{a.rollN(e.rollNumber)}</span>} />
       <FinalRoundNotice e={e} />
-      <div className="tray">
-        <div className="kept-dice">
-          {e.keptDice.map((c, i) => (
-            <Die key={i} face={c} size={28} state="kept" />
-          ))}
-        </div>
-        <div className="dice" key={e.rollNumber}>
-          {l.faces.map((c, i) => (
-            <div key={i} className="die-slot">
-              <Die face={c} size={60} state={l.scoring[i] ? "scoring" : "normal"} />
-            </div>
-          ))}
-        </div>
-        <span className="pill gold">
-          +{fmt(l.points)} · {l.parts.map((p) => a.part(p, fmt)).join(" + ")}
-          {l.hotDice && ` · ${a.hotDice}`}
-        </span>
-      </div>
+      <RollTray e={e} />
       <div className="column center" style={{ textAlign: "center", gap: 2 }}>
         <span className="lbl">{t.ambicioso.turnTotal}</span>
         <span className="big" style={{ color: l.hotDice ? "var(--gold)" : undefined }}>
@@ -372,6 +367,33 @@ function Turn({
         </button>
       </div>
     </>
+  );
+}
+
+/** The dice of the latest roll in this turn, with the ones set aside earlier. */
+export function RollTray({ e }: { e: AmbiciosoState }) {
+  const a = useT().ambicioso;
+  const l = e.lastRoll;
+  if (!l) return null;
+  return (
+    <div className="tray">
+      <div className="kept-dice">
+        {e.keptDice.map((c, i) => (
+          <Die key={i} face={c} size={28} state="kept" />
+        ))}
+      </div>
+      <div className="dice" key={e.rollNumber}>
+        {l.faces.map((c, i) => (
+          <div key={i} className="die-slot">
+            <Die face={c} size={60} state={l.scoring[i] ? "scoring" : "normal"} />
+          </div>
+        ))}
+      </div>
+      <span className="pill gold">
+        +{fmt(l.points)} · {l.parts.map((p) => a.part(p, fmt)).join(" + ")}
+        {l.hotDice && ` · ${a.hotDice}`}
+      </span>
+    </div>
   );
 }
 
@@ -419,17 +441,7 @@ function Busted({ e, passTurn }: { e: AmbiciosoState; passTurn: () => void }) {
   );
 }
 
-function Winner({
-  e,
-  rematch,
-  exit,
-  onNewGame,
-}: {
-  e: AmbiciosoState;
-  rematch: () => void;
-  exit: () => void;
-  onNewGame: () => void;
-}) {
+export function Winner({ e, children }: { e: AmbiciosoState; children: React.ReactNode }) {
   const t = useT();
   const a = t.ambicioso;
   useEffect(() => effects.winner(), []);
@@ -461,17 +473,7 @@ function Winner({
         ))}
       </div>
       <span className="grow" />
-      <div className="column">
-        <button type="button" className="btn pri" onClick={rematch}>
-          {a.rematch}
-        </button>
-        <button type="button" className="btn outlined" onClick={onNewGame}>
-          {a.changeSetup}
-        </button>
-        <button type="button" className="btn outlined" onClick={exit}>
-          {a.backHome}
-        </button>
-      </div>
+      <div className="column">{children}</div>
     </>
   );
 }
@@ -558,7 +560,7 @@ function PauseMenu({
   );
 }
 
-function Scoreboard({ e, close }: { e: AmbiciosoState; close: () => void }) {
+export function Scoreboard({ e, close }: { e: AmbiciosoState; close: () => void }) {
   const t = useT();
   const a = t.ambicioso;
   const ordered = [...e.players].sort((a, b) => b.points - a.points);
@@ -601,7 +603,7 @@ function Scoreboard({ e, close }: { e: AmbiciosoState; close: () => void }) {
   );
 }
 
-function Rules({ close }: { close: () => void }) {
+export function Rules({ close }: { close: () => void }) {
   const t = useT();
   const a = t.ambicioso;
   return (
