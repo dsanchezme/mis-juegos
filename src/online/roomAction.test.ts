@@ -78,6 +78,13 @@ describe("starting", () => {
     expect(change.state?.game.players.map((p) => p.id)).toEqual(["2", "0", "1"]);
     expect(change.state?.last).toEqual({ kind: "start", seat: 2 });
     expect(change.state?.game.config).toEqual({ target: 1000, targetMode: "reachOrPass" });
+    expect(change.state?.gameId).toBe(NOW.toString(36));
+  });
+
+  it("every move keeps the game's id", () => {
+    const room = save(lobby(), act(lobby(), HOST, { type: "START" }, dice(0)));
+    const change = ok(act(room, HOST, { type: "ROLL" }, dice(...faces(1, 2, 3, 4))));
+    expect(change.state?.gameId).toBe(room.state?.gameId);
   });
 
   it("a rematch with nobody from the last game uses the spinner", () => {
@@ -195,8 +202,14 @@ describe("removing a player", () => {
     expect(change.state?.last).toEqual({ kind: "remove", seat: 2 });
   });
 
-  it("only the host can remove, and only players still in the game", () => {
+  it("players can take themselves out (leaving the game)", () => {
+    const change = ok(act(started(), GUEST, { type: "REMOVE_PLAYER", seat: 2 }));
+    expect(change.removeSeats).toEqual([2]);
+  });
+
+  it("only the host can remove others, and only players still in the game", () => {
     expect(act(started(), GUEST, { type: "REMOVE_PLAYER", seat: 0 })).toEqual({ ok: false, error: "not_host" });
+    expect(act(started(), WATCHER, { type: "REMOVE_PLAYER", seat: 2 })).toEqual({ ok: false, error: "not_host" });
     expect(act(started(), HOST, { type: "REMOVE_PLAYER", seat: 7 })).toEqual({ ok: false, error: "seat_not_found" });
     const room = save(started(), act(started(), HOST, { type: "REMOVE_PLAYER", seat: 2 }));
     expect(act(room, HOST, { type: "REMOVE_PLAYER", seat: 2 })).toEqual({ ok: false, error: "seat_not_found" });

@@ -27,6 +27,7 @@ export const CATALOG: CatalogEntry[] = [
     Component: AmbiciosoEntry,
     gameSummary: ambiciosoSummary,
     describeGame: (info, t) =>
-      t.ambicioso.historyDetail(!!info.exact, fmt(Number(info.target)), !!info.complete, Number(info.rounds)),
+      t.ambicioso.historyDetail(!!info.exact, fmt(Number(info.target)), !!info.complete, Number(info.rounds)) +
+      (info.online ? ` · ${t.online.historyTag}` : ""),
   },
 ];
