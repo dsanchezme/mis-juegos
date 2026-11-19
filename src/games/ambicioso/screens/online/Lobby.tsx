@@ -5,6 +5,7 @@ import { type OnlineError, toOnlineError } from "../../../../online/errors";
 import { formatCode, joinLink } from "../../../../online/lobby";
 import { MIN_PLAYERS } from "../../../../online/roomAction";
 import { useRoom } from "../../../../online/useRoom";
+import { QrCode } from "../../../../ui/QrCode";
 import type { AmbiciosoConfig } from "../../rules/ambicioso";
 import { OnlineGame } from "./OnlineGame";
 
@@ -27,6 +28,7 @@ export function Lobby({ roomId, code, left, exit }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<OnlineError | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
 
   const run = async (task: () => Promise<unknown>) => {
     setBusy(true);
@@ -117,9 +119,20 @@ export function Lobby({ roomId, code, left, exit }: Props) {
         <output className="code-big mono" aria-label={o.roomCode}>
           {formatCode(code)}
         </output>
-        <button type="button" className="chip" onClick={share}>
-          🔗 {copied ? o.copied : o.share}
-        </button>
+        <div className="chips" style={{ justifyContent: "center" }}>
+          <button type="button" className="chip" onClick={share}>
+            🔗 {copied ? o.copied : o.share}
+          </button>
+          <button type="button" className="chip" aria-expanded={showQr} onClick={() => setShowQr(!showQr)}>
+            ▦ {showQr ? o.hideQr : o.showQr}
+          </button>
+        </div>
+        {showQr && (
+          <figure className="qr-card">
+            <QrCode text={joinLink("ambicioso", code, location)} label={o.qrLabel(formatCode(code))} />
+            <figcaption className="dim">{o.qrHint}</figcaption>
+          </figure>
+        )}
       </div>
 
       <span className="lbl">{o.players(active.length, MAX_SEATS)}</span>
