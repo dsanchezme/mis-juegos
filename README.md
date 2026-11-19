@@ -37,7 +37,7 @@ The first time you run e2e tests locally, install the browser with `npx playwrig
 
 ## Online play (in development)
 
-Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in and Realtime). Online mode only appears when the app is built with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; without them (as on GitHub Pages today) the app is exactly the single-phone one. The SDK is loaded only when someone opens online mode. So far you can create a room, join it by code or link, set it up and start; the online game screen comes next. Everything is defined in `supabase/` and runs locally in Docker, so you never create tables by hand in the cloud.
+Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in and Realtime). Online mode only appears when the app is built with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; without them (as on GitHub Pages today) the app is exactly the single-phone one. The SDK is loaded only when someone opens online mode. You can create a room, join it by code or link, set it up and play live: everyone sees each roll as it happens, players on the same phone pass it around, and people watching can send emoji reactions (over Realtime Broadcast, never stored). Skipping idle turns, rematches and history come next. Everything is defined in `supabase/` and runs locally in Docker, so you never create tables by hand in the cloud.
 
 | Command                   | What it does                                                                                 |
 | ------------------------- | -------------------------------------------------------------------------------------------- |

@@ -1,27 +1,5 @@
-import { type Browser, expect, type Page, test } from "@playwright/test";
-
-/** A phone with its own storage (its own anonymous player), failing on console errors. */
-async function phone(browser: Browser) {
-  const context = await browser.newContext({ ...test.info().project.use });
-  const page = await context.newPage();
-  const errors: string[] = [];
-  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-  page.on("pageerror", (e) => errors.push(e.message));
-  return { page, errors, close: () => context.close() };
-}
-
-async function openOnline(page: Page, name: string) {
-  await page.goto("./");
-  await page
-    .getByRole("button", { name: /Ambicioso/ })
-    .first()
-    .click();
-  await page.getByRole("button", { name: /En línea/ }).click();
-  await page.getByLabel("Tu nombre").fill(name);
-}
-
-const roomCode = async (page: Page) =>
-  (await page.getByRole("status", { name: "Código de la sala" }).textContent())?.replace(" ", "") ?? "";
+import { expect, test } from "@playwright/test";
+import { gameScreen, openOnline, phone, roomCode } from "./phones";
 
 test("two phones meet in a room, set it up and start", async ({ browser }) => {
   const diego = await phone(browser);
@@ -64,9 +42,7 @@ test("two phones meet in a room, set it up and start", async ({ browser }) => {
   await expect(diego.page.getByRole("img", { name: "conectado" })).toHaveCount(3);
 
   await diego.page.getByRole("button", { name: "Empezar" }).click();
-  for (const p of [diego.page, ana.page]) {
-    await expect(p.getByRole("heading", { name: "La partida empezó" })).toBeVisible();
-  }
+  for (const p of [diego.page, ana.page]) await expect(gameScreen(p)).toBeVisible();
 
   expect(diego.errors).toEqual([]);
   expect(ana.errors).toEqual([]);
