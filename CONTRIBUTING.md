@@ -36,17 +36,19 @@ Beyond what the linter enforces:
 
 ## Tests
 
-| Layer         | Tool                   | Where                 | What belongs there                                                           |
-| ------------- | ---------------------- | --------------------- | ---------------------------------------------------------------------------- |
-| Unit          | Vitest                 | `src/**/*.test.ts(x)` | Game rules, scoring, engine helpers. Fast, many, exhaustive on edge cases.   |
-| End-to-end    | Playwright (Pixel 7)   | `e2e/*.spec.ts`       | A few critical journeys on the production build: start a game, roll, resume. |
-| Accessibility | axe-core in Playwright | `e2e/hub.spec.ts`     | No serious or critical WCAG violations on key screens.                       |
+| Layer         | Tool                   | Where                                | What belongs there                                                           |
+| ------------- | ---------------------- | ------------------------------------ | ---------------------------------------------------------------------------- |
+| Unit          | Vitest                 | `src/**/*.test.ts(x)`                | Game rules, scoring, engine helpers. Fast, many, exhaustive on edge cases.   |
+| End-to-end    | Playwright (Pixel 7)   | `e2e/*.spec.ts`                      | A few critical journeys on the production build: start a game, roll, resume. |
+| Accessibility | axe-core in Playwright | `e2e/hub.spec.ts`                    | No serious or critical WCAG violations on key screens.                       |
+| Database      | pgTAP (Supabase CLI)   | `supabase/tests/database/*.test.sql` | Row level security and every SQL function: who may read or change what.      |
 
 Rules:
 
 - **Every bug fix starts with a failing test** that reproduces it.
 - **Every new rule gets a unit test** before or alongside the code.
 - Coverage of `rules/` and `engine/` must stay at or above the thresholds in `vitest.config.ts` (90% lines, functions and statements; 85% branches). CI fails below that.
+- **Every SQL function or policy gets a pgTAP test**, including the cases that must be rejected (outsiders, wrong role, bad input). Database changes are new files in `supabase/migrations/`; never edit a migration that is already on `main`.
 - E2E tests fail on any browser console error, and `Math.random` is seeded so runs are reproducible. Select elements by role and accessible name, not CSS classes.
 
 ## Dependencies
