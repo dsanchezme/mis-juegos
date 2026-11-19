@@ -59,6 +59,14 @@ test("a shared link joins straight away and leaving gives the host role away", a
   await expect(diego.page.getByText("Jugadores · 1 de 8")).toBeVisible();
   const code = await roomCode(diego.page);
 
+  // Diego can also show a QR code for Ana to scan instead of sending the link.
+  await diego.page.getByRole("button", { name: "Mostrar QR" }).click();
+  await expect(
+    diego.page.getByRole("img", { name: `Código QR para unirse a la sala ${code.slice(0, 3)} ${code.slice(3)}` }),
+  ).toBeVisible();
+  await diego.page.getByRole("button", { name: "Ocultar QR" }).click();
+  await expect(diego.page.getByRole("img", { name: /Código QR/ })).toHaveCount(0);
+
   // Ana has played online before (her name is remembered) and opens the link.
   await ana.page.goto("./");
   await ana.page.evaluate(() =>
