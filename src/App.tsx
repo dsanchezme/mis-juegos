@@ -4,7 +4,8 @@ import { Hub } from "./hub/Hub";
 import { unlockAudio } from "./ui/effects";
 
 const gameFromHash = () => {
-  const id = location.hash.replace(/^#\/?/, "");
+  // "#ambicioso" or a deeper route inside the game, e.g. "#ambicioso/join/K7MQ2P".
+  const id = location.hash.replace(/^#\/?/, "").split("/")[0];
   return CATALOG.some((j) => j.id === id) ? id : null;
 };
 

@@ -78,7 +78,7 @@ jobs:
   database:
     name: Database, Edge Function and online tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -100,11 +100,24 @@ jobs:
         run: supabase db lint --schema online --level warning --fail-on warning
       - name: pgTAP tests (row level security, lobby rules, saving moves)
         run: supabase test db
-      - name: Online tests (phones playing through the Edge Function)
+      - name: Expose the local stack to the tests
         run: |
-          eval "$(supabase status -o env --override-name api.url=SUPABASE_API_URL --override-name auth.publishable_key=SUPABASE_PUBLISHABLE_KEY)"
-          export SUPABASE_API_URL SUPABASE_PUBLISHABLE_KEY
-          npx vitest run --config vitest.online.config.ts
+          supabase status -o env \
+            --override-name api.url=SUPABASE_API_URL \
+            --override-name auth.publishable_key=SUPABASE_PUBLISHABLE_KEY \
+            | grep -E '^SUPABASE_(API_URL|PUBLISHABLE_KEY)=' | tr -d '"' >> "$GITHUB_ENV"
+      - name: Online tests (phones playing through the Edge Function)
+        run: npx vitest run --config vitest.online.config.ts
+      - run: npx playwright install --with-deps chromium
+      - name: Online end-to-end tests (several phones in a room)
+        run: npx playwright test --config playwright.online.config.ts
+      - name: Upload online Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-online
+          path: playwright-report-online
+          retention-days: 7
       - name: Edge Function logs
         if: failure()
         run: docker logs supabase_edge_runtime_mis-juegos 2>&1 | tail -100

@@ -9,3 +9,5 @@ test-results
 .env.*
 !.env.example
 supabase/functions/*/core.js
+dist-online
+playwright-report-online
