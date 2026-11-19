@@ -104,3 +104,27 @@ export async function addSeatWithFreeColor(roomId: string, name: string, preferr
     throw e;
   }
 }
+
+/**
+ * Leaves the room for good. A phone with players still in a game first takes them out of
+ * it, one move each, so everyone sees them go and the game carries on without them.
+ */
+export async function leaveGame(roomId: string, me: string): Promise<void> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const snapshot = await fetchRoom(roomId);
+    if (!snapshot) return;
+    const { room, seats } = snapshot;
+    const game = room.status === "playing" ? room.state?.game : undefined;
+    const mine = game?.players.find(
+      (p) => !p.removed && seats.some((s) => String(s.seat) === p.id && s.user_id === me),
+    );
+    if (!mine) break;
+    try {
+      await act(roomId, room.version, { type: "REMOVE_PLAYER", seat: Number(mine.id) });
+    } catch (e) {
+      // Someone moved at the same time: look again and retry.
+      if (!(e instanceof OnlineFailure && e.code === "stale_version")) throw e;
+    }
+  }
+  await leaveRoom(roomId);
+}

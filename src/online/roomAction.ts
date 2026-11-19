@@ -33,6 +33,8 @@ export interface Seat {
 
 /** What the server stores in `rooms.state` once a game has started. */
 export interface OnlineState {
+  /** Tells games in the same room apart, across rematches (for each phone's history). */
+  gameId: string;
   game: AmbiciosoState;
   /** The latest move, so every phone can animate it (including busts, whose dice are gone from `game`). */
   last: LastMove | null;
@@ -120,11 +122,11 @@ export function parseAction(input: unknown): ClientAction | null {
 
 const fail = (error: ActionError): ActionResult => ({ ok: false, error });
 
-function playing(game: AmbiciosoState, last: LastMove, removeSeats: number[] = []): ActionResult {
+function playing(gameId: string, game: AmbiciosoState, last: LastMove, removeSeats: number[] = []): ActionResult {
   const over = game.phase === "winner" || game.phase === "ended";
   return {
     ok: true,
-    change: { status: over ? "finished" : "playing", state: { game, last }, removeSeats, rematch: false },
+    change: { status: over ? "finished" : "playing", state: { gameId, game, last }, removeSeats, rematch: false },
   };
 }
 
@@ -143,7 +145,9 @@ export function roomAction(room: Room, userId: string, action: ClientAction, env
     const people = ordered.map((s) => ({ id: playerId(s.seat), name: s.name, color: s.color }));
     // Seed 0: online the dice come from the server, never from the seed.
     const game = newState(people, room.config, 0);
-    return playing(game, { kind: "start", seat: ordered[0].seat });
+    // Start time is enough to tell games in the same room apart.
+    const gameId = env.now.toString(36);
+    return playing(gameId, game, { kind: "start", seat: ordered[0].seat });
   }
 
   if (action.type === "REMATCH") {
@@ -154,7 +158,7 @@ export function roomAction(room: Room, userId: string, action: ClientAction, env
   }
 
   if (room.status !== "playing" || !room.state) return fail("wrong_status");
-  const game = room.state.game;
+  const { game, gameId } = room.state;
   const currentSeat = seatOf(game.players[game.turnIndex].id);
   const owner = room.seats.find((s) => s.seat === currentSeat)?.userId;
 
@@ -169,29 +173,35 @@ export function roomAction(room: Room, userId: string, action: ClientAction, env
         const outcome = rolled.lossReason === "overshot" ? "overshot" : "bust";
         // Online nobody needs to hand the phone over: the turn passes right away.
         const passed = apply(rolled, { type: "PASS_TURN" });
-        return playing(passed, { kind: "roll", seat: currentSeat, roll, outcome, lost: rolled.lost });
+        return playing(gameId, passed, { kind: "roll", seat: currentSeat, roll, outcome, lost: rolled.lost });
       }
-      return playing(rolled, { kind: "roll", seat: currentSeat, roll, outcome: "rolled", lost: 0 });
+      return playing(gameId, rolled, { kind: "roll", seat: currentSeat, roll, outcome: "rolled", lost: 0 });
     }
 
     case "BANK": {
       if (owner !== userId) return fail("not_your_turn");
       if (game.phase !== "rolled") return fail("not_allowed_now");
-      return playing(apply(game, { type: "BANK" }), { kind: "bank", seat: currentSeat, points: game.turnTotal });
+      return playing(gameId, apply(game, { type: "BANK" }), {
+        kind: "bank",
+        seat: currentSeat,
+        points: game.turnTotal,
+      });
     }
 
     case "SKIP_TURN": {
       if (member.role === "spectator") return fail("spectator");
       if (env.now - room.updatedAt < SKIP_AFTER_MS) return fail("too_early");
-      return playing(apply(game, { type: "SKIP_TURN" }), { kind: "skip", seat: currentSeat });
+      return playing(gameId, apply(game, { type: "SKIP_TURN" }), { kind: "skip", seat: currentSeat });
     }
 
     case "REMOVE_PLAYER": {
-      if (!isHost) return fail("not_host");
+      // The host can take anyone out; anyone can take out their own players (leaving the game).
+      const ownSeat = room.seats.some((s) => s.seat === action.seat && s.userId === userId);
+      if (!isHost && !ownSeat) return fail("not_host");
       const target = game.players.find((p) => p.id === playerId(action.seat));
       if (!target || target.removed) return fail("seat_not_found");
       const next = apply(game, { type: "REMOVE_PLAYER", playerId: target.id });
-      return playing(next, { kind: "remove", seat: action.seat }, [action.seat]);
+      return playing(gameId, next, { kind: "remove", seat: action.seat }, [action.seat]);
     }
   }
 }

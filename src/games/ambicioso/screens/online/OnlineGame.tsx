@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useSettings } from "../../../../engine/hub";
+import { saveToHistory, useSettings } from "../../../../engine/hub";
 import { EffectSettings } from "../../../../hub/Settings";
 import { fmt, useT } from "../../../../i18n";
-import { act, leaveRoom, OnlineFailure, type RoomSnapshot } from "../../../../online/api";
+import { act, leaveGame, OnlineFailure, type RoomSnapshot } from "../../../../online/api";
 import { type OnlineError, toOnlineError } from "../../../../online/errors";
-import { REACTIONS, senderName, turnView } from "../../../../online/game";
-import type { LastMove } from "../../../../online/roomAction";
+import { clock, REACTIONS, senderName, turnView } from "../../../../online/game";
+import { type ClientAction, type LastMove, SKIP_AFTER_MS } from "../../../../online/roomAction";
 import type { RoomView } from "../../../../online/useRoom";
 import { Die } from "../../../../ui/Die";
 import { effects } from "../../../../ui/effects";
@@ -55,6 +55,9 @@ export function OnlineGame({ roomId, view, snapshot, left, exit }: Props) {
   const game = state.game;
   const turn = turnView(state, seats, view.me);
   const spectator = members.find((m) => m.user_id === view.me)?.role === "spectator";
+  const hostId = members.find((m) => m.role === "host")?.user_id;
+  const isHost = hostId !== undefined && hostId === view.me;
+  const hostName = seats.find((s) => s.user_id === hostId && !s.removed)?.name ?? "";
 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<OnlineError | null>(null);
@@ -65,6 +68,8 @@ export function OnlineGame({ roomId, view, snapshot, left, exit }: Props) {
   const offline = useDelayed(!view.live, OFFLINE_NOTICE_MS);
   const shakeEnabled = settings.shake && shakeAvailable();
   const lastShakeSound = useRef(0);
+  const idle = useIdleMs(room.version);
+  useSaveToHistory(roomId, state, seats, view.me);
 
   // A new turn on a shared phone starts on the "pass the phone" screen again.
   // biome-ignore lint/correctness/useExhaustiveDependencies: must re-run whenever the turn or round changes.
@@ -96,6 +101,28 @@ export function OnlineGame({ roomId, view, snapshot, left, exit }: Props) {
   const roll = () => void send("ROLL");
   const bank = () => void send("BANK");
 
+  /** Anything else: skipping, taking someone out, rematch, leaving. */
+  const run = async (task: () => Promise<unknown>) => {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      await task();
+    } catch (e) {
+      const code = e instanceof OnlineFailure ? e.code : toOnlineError(e);
+      if (code !== "stale_version") setError(code);
+    } finally {
+      setPending(false);
+      view.refresh();
+    }
+  };
+  const move = (action: ClientAction) => run(() => act(roomId, room.version, action));
+  const leave = () =>
+    run(async () => {
+      if (view.me) await leaveGame(roomId, view.me);
+      left();
+    });
+
   const canRoll = turn.myTurn && !pending && !show.current && (game.phase === "rolled" || game.phase === "handOff");
   useShake(
     shakeEnabled && canRoll && overlay === null && (game.phase === "rolled" || !turn.sharedPhone || ready),
@@ -124,30 +151,35 @@ export function OnlineGame({ roomId, view, snapshot, left, exit }: Props) {
   } else if (finished) {
     content = (
       <Winner e={game}>
-        <button type="button" className="btn pri" onClick={exit}>
+        {isHost ? (
+          <button type="button" className="btn pri" disabled={pending} onClick={() => move({ type: "REMATCH" })}>
+            {o.rematch}
+          </button>
+        ) : (
+          <span className="center dim">{o.waitingRematch(hostName)}</span>
+        )}
+        <button type="button" className="btn outlined" onClick={exit}>
           {t.ambicioso.backHome}
         </button>
-        <button
-          type="button"
-          className="btn outlined"
-          disabled={pending}
-          onClick={async () => {
-            setPending(true);
-            try {
-              await leaveRoom(roomId);
-              left();
-            } catch (e) {
-              setError(e instanceof OnlineFailure ? e.code : toOnlineError(e));
-              setPending(false);
-            }
-          }}
-        >
+        <button type="button" className="btn outlined" disabled={pending} onClick={leave}>
           {o.leave}
         </button>
       </Winner>
     );
   } else if (!turn.myTurn) {
-    content = <Watching e={game} connected={turn.currentPhone !== null && view.online.has(turn.currentPhone)} />;
+    content = (
+      <Watching e={game} connected={turn.currentPhone !== null && view.online.has(turn.currentPhone)}>
+        {!spectator && (
+          <Waiting
+            e={game}
+            waitLeft={SKIP_AFTER_MS - idle}
+            busy={pending}
+            skip={() => move({ type: "SKIP_TURN" })}
+            remove={isHost ? () => move({ type: "REMOVE_PLAYER", seat: turn.currentSeat }) : undefined}
+          />
+        )}
+      </Watching>
+    );
   } else if (game.phase === "handOff" && turn.sharedPhone && !ready) {
     content = <HandOff e={game} ready={() => (shakeEnabled ? setReady(true) : roll())} shakeEnabled={shakeEnabled} />;
   } else if (game.phase === "handOff") {
@@ -193,7 +225,15 @@ export function OnlineGame({ roomId, view, snapshot, left, exit }: Props) {
         </div>
       </div>
       <FloatingReactions reactions={view.reactions} seats={seats} />
-      {overlay === "menu" && <Menu close={() => setOverlay(null)} open={setOverlay} exit={exit} />}
+      {overlay === "menu" && (
+        <Menu
+          close={() => setOverlay(null)}
+          open={setOverlay}
+          exit={exit}
+          leave={finished ? undefined : leave}
+          playing={!spectator && turn.myPlayers > 0}
+        />
+      )}
       {overlay === "scoreboard" && <Scoreboard e={game} close={() => setOverlay(null)} />}
       {overlay === "rules" && <Rules close={() => setOverlay("menu")} />}
     </>
@@ -258,6 +298,53 @@ function useMoveAnimation(state: NonNullable<RoomSnapshot["room"]["state"]>, ver
       setCurrent(null);
     },
   };
+}
+
+/** Milliseconds since the room last changed, as seen by this phone; ticks every second. */
+function useIdleMs(version: number) {
+  const [since, setSince] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: every change in the room restarts the wait.
+  useEffect(() => {
+    // Every change in the room (a move, someone joining) restarts the wait.
+    setSince(Date.now());
+    setNow(Date.now());
+  }, [version]);
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  return Math.max(0, now - since);
+}
+
+/** Once a game this phone played in is over, it goes into the phone's history (once). */
+function useSaveToHistory(
+  roomId: string,
+  state: NonNullable<RoomSnapshot["room"]["state"]>,
+  seats: RoomSnapshot["seats"],
+  me: string | null,
+) {
+  const { game, gameId } = state;
+  const over = game.phase === "winner" || game.phase === "ended";
+  const played =
+    me !== null && game.players.some((p) => seats.some((s) => String(s.seat) === p.id && s.user_id === me));
+  useEffect(() => {
+    if (!over || !played) return;
+    saveToHistory({
+      id: `online-${roomId}-${gameId}`,
+      game: "ambicioso",
+      date: new Date().toISOString(),
+      players: game.players.map((p) => ({ id: p.id, name: p.name, color: p.color, points: p.points })),
+      winners: game.phase === "winner" ? game.winners : [],
+      info: {
+        target: game.config.target,
+        exact: game.config.targetMode === "exact",
+        rounds: game.round,
+        complete: game.phase === "winner",
+        online: true,
+      },
+    });
+  }, [over, played, roomId, gameId, game]);
 }
 
 function clearTimers(ids: number[]) {
@@ -465,7 +552,7 @@ function Turn({
 }
 
 /** Someone else's turn: their dice, live. */
-function Watching({ e, connected }: { e: AmbiciosoState; connected: boolean }) {
+function Watching({ e, connected, children }: { e: AmbiciosoState; connected: boolean; children: React.ReactNode }) {
   const t = useT();
   const a = t.ambicioso;
   const o = t.online;
@@ -489,6 +576,7 @@ function Watching({ e, connected }: { e: AmbiciosoState; connected: boolean }) {
         </div>
         <span className="grow" />
         <LastTurn e={e} />
+        {children}
       </>
     );
   }
@@ -515,7 +603,71 @@ function Watching({ e, connected }: { e: AmbiciosoState; connected: boolean }) {
         </span>
       </div>
       <span className="grow" />
+      {children}
     </>
+  );
+}
+
+/**
+ * When the player in turn does nothing for a minute (away, or offline), anyone playing can
+ * skip their turn; the host can also take them out of the game.
+ */
+function Waiting({
+  e,
+  waitLeft,
+  busy,
+  skip,
+  remove,
+}: {
+  e: AmbiciosoState;
+  waitLeft: number;
+  busy: boolean;
+  skip: () => void;
+  remove?: () => void;
+}) {
+  const t = useT();
+  const o = t.online;
+  const [confirming, setConfirming] = useState(false);
+  const name = e.players[e.turnIndex].name;
+  if (waitLeft > 0) {
+    // Only worth mentioning once the wait is noticeable.
+    if (waitLeft > SKIP_AFTER_MS - 20_000) return null;
+    return <span className="dim center">{o.skipIn(name, clock(waitLeft))}</span>;
+  }
+  if (confirming && remove) {
+    return (
+      <div className="card column">
+        <b>{o.removeConfirm(name)}</b>
+        <div className="row">
+          <button type="button" className="btn outlined small grow" onClick={() => setConfirming(false)}>
+            {t.common.cancel}
+          </button>
+          <button
+            type="button"
+            className="btn danger small grow"
+            disabled={busy}
+            onClick={() => {
+              setConfirming(false);
+              remove();
+            }}
+          >
+            {o.removeYes}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="column" style={{ gap: 6 }}>
+      <button type="button" className="btn sec" disabled={busy} onClick={skip}>
+        {o.skipTurn(name)}
+      </button>
+      {remove && (
+        <button type="button" className="btn danger-outlined" disabled={busy} onClick={() => setConfirming(true)}>
+          {o.removePlayer(name)}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -562,10 +714,26 @@ function FloatingReactions({ reactions, seats }: { reactions: RoomView["reaction
   );
 }
 
-function Menu({ close, open, exit }: { close: () => void; open: (o: Overlay) => void; exit: () => void }) {
+function Menu({
+  close,
+  open,
+  exit,
+  leave,
+  playing,
+}: {
+  close: () => void;
+  open: (o: Overlay) => void;
+  exit: () => void;
+  /** Leave the room for good (and, for a player, the game). */
+  leave?: () => void;
+  /** This phone has players still in the game. */
+  playing: boolean;
+}) {
   const t = useT();
   const a = t.ambicioso;
+  const o = t.online;
   const [effectsOpen, setEffectsOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   return (
     <div className="overlay" role="dialog" aria-label={t.online.menu}>
       <div className="screen">
@@ -591,9 +759,32 @@ function Menu({ close, open, exit }: { close: () => void; open: (o: Overlay) => 
           </button>
           {effectsOpen && <EffectSettings />}
           <button type="button" className="btn outlined" onClick={exit}>
-            {t.online.leaveForNow}
+            {o.leaveForNow}
           </button>
         </div>
+        <span className="grow" />
+        {leave &&
+          (confirming ? (
+            <div className="card column">
+              <b>{o.leaveGameConfirm}</b>
+              <div className="row">
+                <button type="button" className="btn outlined small grow" onClick={() => setConfirming(false)}>
+                  {t.common.cancel}
+                </button>
+                <button type="button" className="btn danger small grow" onClick={leave}>
+                  {o.leaveGame}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn danger-outlined"
+              onClick={() => (playing ? setConfirming(true) : leave())}
+            >
+              {playing ? o.leaveGame : o.leave}
+            </button>
+          ))}
       </div>
     </div>
   );

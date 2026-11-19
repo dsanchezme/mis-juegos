@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { newState } from "../games/ambicioso/rules/ambicioso";
-import { parseReaction, senderName, turnView } from "./game";
+import { clock, parseReaction, senderName, turnView } from "./game";
 import type { OnlineState } from "./roomAction";
 
 const seats = [
@@ -10,6 +10,7 @@ const seats = [
 ];
 
 const game = (order: number[]): OnlineState => ({
+  gameId: "g1",
   game: newState(
     order.map((seat) => ({ id: String(seat), name: seats[seat].name, color: "#ffffff" })),
     { target: 1000, targetMode: "reachOrPass" },
@@ -26,9 +27,10 @@ describe("turnView", () => {
       currentPhone: "ana",
       myTurn: true,
       sharedPhone: false,
+      myPlayers: 1,
     });
-    expect(turnView(state, seats, "diego")).toMatchObject({ myTurn: false, sharedPhone: true });
-    expect(turnView(state, seats, null)).toMatchObject({ myTurn: false, sharedPhone: false });
+    expect(turnView(state, seats, "diego")).toMatchObject({ myTurn: false, sharedPhone: true, myPlayers: 2 });
+    expect(turnView(state, seats, null)).toMatchObject({ myTurn: false, sharedPhone: false, myPlayers: 0 });
   });
 
   it("no longer counts a phone as shared once its other player is out", () => {
@@ -58,5 +60,15 @@ describe("reactions", () => {
     expect(senderName("diego", seats)).toBe("Diego · Juli");
     expect(senderName("ana", seats)).toBe("Ana");
     expect(senderName("spectator", seats)).toBe("");
+  });
+});
+
+describe("clock", () => {
+  it("shows minutes and seconds, rounding up", () => {
+    expect(clock(12_000)).toBe("0:12");
+    expect(clock(11_200)).toBe("0:12");
+    expect(clock(60_000)).toBe("1:00");
+    expect(clock(0)).toBe("0:00");
+    expect(clock(-5)).toBe("0:00");
   });
 });

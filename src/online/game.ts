@@ -20,6 +20,8 @@ export interface TurnView {
   myTurn: boolean;
   /** This phone holds more than one player still in the game, so they pass it around. */
   sharedPhone: boolean;
+  /** How many players still in the game this phone holds. */
+  myPlayers: number;
 }
 
 export function turnView(state: OnlineState, seats: SeatLike[], me: string | null): TurnView {
@@ -28,7 +30,13 @@ export function turnView(state: OnlineState, seats: SeatLike[], me: string | nul
   const currentPhone = seats.find((s) => s.seat === currentSeat)?.user_id ?? null;
   const inGame = new Set(game.players.filter((p) => !p.removed).map((p) => seatOf(p.id)));
   const mine = seats.filter((s) => s.user_id === me && inGame.has(s.seat));
-  return { currentSeat, currentPhone, myTurn: me !== null && currentPhone === me, sharedPhone: mine.length > 1 };
+  return {
+    currentSeat,
+    currentPhone,
+    myTurn: me !== null && currentPhone === me,
+    sharedPhone: mine.length > 1,
+    myPlayers: mine.length,
+  };
 }
 
 /** Emoji reactions anyone in the room can send; nothing else is accepted. */
@@ -59,4 +67,10 @@ export function senderName(from: string, seats: SeatLike[]): string {
     .filter((s) => s.user_id === from && !s.removed)
     .map((s) => s.name)
     .join(" · ");
+}
+
+/** A wait as minutes and seconds, rounded up: 12_000 → "0:12". */
+export function clock(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
