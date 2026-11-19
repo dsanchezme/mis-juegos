@@ -213,6 +213,7 @@ export const en: Texts = {
     noTurns: "No turns yet.",
     logBanked: (n: string, pts: string, total: string) => `${n} banked ${pts} → ${total}`,
     logOvershot: (n: string, pts: string) => `${n} went over and lost ${pts}`,
+    logSkipped: (n: string) => `${n} missed their turn`,
     logBust: (n: string, pts: string | null) => `${n} busted${pts ? ` and lost ${pts}` : ""}`,
     roundShort: (n: number) => `R${n}`,
 

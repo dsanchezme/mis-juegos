@@ -37,27 +37,34 @@ The first time you run e2e tests locally, install the browser with `npx playwrig
 
 ## Online play (in development)
 
-Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in and Realtime). Nothing in the app uses it yet; the design is in the project's design notes. Everything is defined in `supabase/` and runs locally in Docker, so you never create tables by hand in the cloud.
+Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in and Realtime). The app does not use it yet; the design is in the project's design notes. Everything is defined in `supabase/` and runs locally in Docker, so you never create tables by hand in the cloud.
 
-| Command            | What it does                                                       |
-| ------------------ | ------------------------------------------------------------------ |
-| `npm run db:start` | Start the local Supabase stack (needs Docker) and apply migrations |
-| `npm run db:reset` | Recreate the local database from `supabase/migrations`             |
-| `npm run db:test`  | Database tests (pgTAP) in `supabase/tests/database`                |
-| `npm run db:lint`  | Lint the SQL in the `online` schema                                |
-| `npm run db:stop`  | Stop the local stack                                               |
+| Command                   | What it does                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| `npm run db:start`        | Bundle the Edge Function, start the local Supabase stack (needs Docker) and apply migrations |
+| `npm run db:reset`        | Recreate the local database from `supabase/migrations`                                       |
+| `npm run db:test`         | Database tests (pgTAP) in `supabase/tests/database`                                          |
+| `npm run db:lint`         | Lint the SQL in the `online` schema                                                          |
+| `npm run test:online`     | Play through the Edge Function as several phones (needs `db:start`)                          |
+| `npm run build:functions` | Re-bundle `src/online/` into the Edge Function after changing it                             |
+| `npm run db:stop`         | Stop the local stack                                                                         |
 
 ```
 supabase/
   config.toml         local stack settings (anonymous sign-in on, `online` schema exposed)
   migrations/         schema changes, applied in order; never edit one that is merged
-  tests/database/     pgTAP tests: row level security and lobby rules
+  functions/
+    room-action/      Edge Function for game moves (thin Deno wrapper; core.js is generated)
+  tests/database/     pgTAP tests: row level security, lobby rules, saving moves
+  tests/functions/    online tests: real sign-ins, SQL functions and the Edge Function together
 ```
 
 How it is secured:
 
 - All tables live in the `online` schema with row level security. Players can only **read** rooms they belong to.
-- Clients never write tables directly. Lobby changes go through SQL functions (`create_room`, `join_room`, `add_seat`, `remove_seat`, `update_config`, `leave_room`) that check who is calling. Game moves will go through an Edge Function that rolls the dice, so no phone can predict or fake a roll.
+- Clients never write tables directly. Lobby changes go through SQL functions (`create_room`, `join_room`, `add_seat`, `remove_seat`, `update_config`, `leave_room`) that check who is calling.
+- Game moves (`START`, `ROLL`, `BANK`, `SKIP_TURN`, `REMOVE_PLAYER`, `REMATCH`) go through the `room-action` Edge Function. The server rolls the dice with a cryptographic generator, so no phone can predict or fake a roll, and it runs the same `apply()` as the single-phone game. Its logic is plain TypeScript in `src/online/` (unit tested with Vitest) bundled into the function.
+- Every move carries the room `version` the phone saw. A move based on an older version is refused, and the save is atomic (`commit_action`), so a double tap or two phones at once never apply twice.
 - A phone (`room_members`) can control several players (`room_seats`), for pass-and-play inside an online room.
 
 ## Project structure
@@ -68,6 +75,7 @@ src/
   engine/             shared engine: game contract, seeded randomness, storage and its migrations
   ui/                 dice, styles, sound and haptics, shake to roll, who goes first
   i18n/               Spanish and English texts, and the language hook
+  online/             online server logic (run by the Edge Function): room moves, dice, HTTP handler
   games/
     catalog.ts        list of games shown in the hub
     ambicioso/

@@ -76,22 +76,38 @@ jobs:
           retention-days: 7
 
   database:
-    name: Database migrations and security tests
+    name: Database, Edge Function and online tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
       - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
         with:
           version: 3.2.0
-      # Only Postgres: applies every migration in supabase/migrations from scratch.
-      - run: supabase db start
+      - name: Bundle the Edge Function
+        run: npm run build:functions
+      # Applies every migration from scratch and serves the Edge Functions.
+      - name: Start local Supabase
+        run: supabase start -x studio,imgproxy,mailpit,postgres-meta,supavisor,vector,logflare
       - name: Lint SQL
         run: supabase db lint --schema online --level warning --fail-on warning
-      - name: pgTAP tests (row level security, lobby rules)
+      - name: pgTAP tests (row level security, lobby rules, saving moves)
         run: supabase test db
+      - name: Online tests (phones playing through the Edge Function)
+        run: |
+          eval "$(supabase status -o env --override-name api.url=SUPABASE_API_URL --override-name auth.publishable_key=SUPABASE_PUBLISHABLE_KEY)"
+          export SUPABASE_API_URL SUPABASE_PUBLISHABLE_KEY
+          npx vitest run --config vitest.online.config.ts
+      - name: Edge Function logs
+        if: failure()
+        run: docker logs supabase_edge_runtime_mis-juegos 2>&1 | tail -100
 
   security:
     name: Dependency audit

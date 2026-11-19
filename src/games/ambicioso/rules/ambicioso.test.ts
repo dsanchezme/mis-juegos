@@ -175,3 +175,85 @@ describe("scoreboard helpers", () => {
     expect(ambicioso.apply(ambicioso.newState(people, config, 1), { type: "END" }).phase).toBe("ended");
   });
 });
+
+describe("skipping a turn (online)", () => {
+  it("ends the turn with no points and logs it", () => {
+    const e = play(fresh(), rollFaces([1, 5, 3, 2]), { type: "SKIP_TURN" });
+    expect(e.turnIndex).toBe(1);
+    expect(e.phase).toBe("handOff");
+    expect(e.players[0]).toMatchObject({ points: 0, turns: 1, busts: 0 });
+    expect(e.history.at(-1)).toMatchObject({ type: "skipped", playerId: "ana", points: 150, total: 0 });
+  });
+
+  it("works before the first roll", () => {
+    const e = apply(fresh(), { type: "SKIP_TURN" });
+    expect(e.turnIndex).toBe(1);
+    expect(e.history.at(-1)).toMatchObject({ type: "skipped", points: 0 });
+  });
+
+  it("after a bust it just passes the turn (the bust is already logged)", () => {
+    const e = play(fresh(), rollFaces([2, 3, 4, 6]), { type: "SKIP_TURN" });
+    expect(e.turnIndex).toBe(1);
+    expect(e.history.map((h) => h.type)).toEqual(["bust"]);
+  });
+
+  it("does nothing once the game is over", () => {
+    const e = play(fresh(), { type: "END" });
+    expect(apply(e, { type: "SKIP_TURN" })).toBe(e);
+  });
+
+  it("closes the final round like any other turn", () => {
+    const e = play(
+      fresh(config, 2),
+      rollFaces([1, 1, 1, 2]),
+      { type: "BANK" }, // Ana reaches 1,000
+      { type: "SKIP_TURN" },
+    );
+    expect(e.phase).toBe("winner");
+    expect(e.winners).toEqual(["ana"]);
+  });
+});
+
+describe("removing a player (online)", () => {
+  const remove = (playerId: string): AmbiciosoAction => ({ type: "REMOVE_PLAYER", playerId });
+
+  it("their turns are skipped from then on, and they keep their points", () => {
+    let e = play(fresh(), rollFaces([1, 5, 3, 2]), { type: "BANK" }, remove("ana"));
+    expect(e.players[0]).toMatchObject({ points: 150, removed: true });
+    expect(e.turnIndex).toBe(1);
+    e = play(e, { type: "SKIP_TURN" }, { type: "SKIP_TURN" });
+    expect(e.turnIndex).toBe(1); // Ana is skipped
+    expect(e.round).toBe(2);
+  });
+
+  it("removing the player in turn ends their turn without a history entry", () => {
+    const e = play(fresh(), rollFaces([1, 5, 3, 2]), remove("ana"));
+    expect(e.turnIndex).toBe(1);
+    expect(e.phase).toBe("handOff");
+    expect(e.history).toEqual([]);
+  });
+
+  it("a removed player cannot win, even with the most points", () => {
+    let e = play(fresh(), rollFaces([1, 1, 1, 2]), { type: "BANK" }); // Ana 1,000: final round
+    e = play(e, rollFaces([1, 5, 2, 3]), { type: "BANK" }, remove("ana")); // Diego 150
+    expect(e.phase).toBe("handOff");
+    e = apply(e, rollFaces([5, 2, 3, 4]));
+    e = apply(e, { type: "BANK" }); // Caro 50, round closes
+    expect(e.phase).toBe("winner");
+    expect(e.winners).toEqual(["diego"]);
+  });
+
+  it("with one player left, that player wins", () => {
+    const e = play(fresh(config, 2), remove("diego"));
+    expect(e.phase).toBe("winner");
+    expect(e.winners).toEqual(["ana"]);
+  });
+
+  it("ignores unknown or already removed players, and finished games", () => {
+    const e = apply(fresh(), remove("diego"));
+    expect(apply(e, remove("diego"))).toBe(e);
+    expect(apply(e, remove("nobody"))).toBe(e);
+    const over = apply(fresh(), { type: "END" });
+    expect(apply(over, remove("ana"))).toBe(over);
+  });
+});
