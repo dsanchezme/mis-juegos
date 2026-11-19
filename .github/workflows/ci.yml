@@ -45,7 +45,13 @@ jobs:
               console.log(["### Coverage", "| Metric | % |", "|---|---|", ...["lines", "statements", "functions", "branches"].map(row)].join("\n"));
             ' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - run: npm run build
+      # The production Supabase address and publishable key are public by design (they ship
+      # in the app). Only builds with them show online mode.
+      - name: Build (with online mode, pointing to production Supabase)
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://wiaeagcvnyzbcxxshmhk.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_1TEudFsnBjG3poRrGY21WQ_T327E3Zj
       - name: Upload site for deploy
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
@@ -153,10 +159,54 @@ jobs:
         with:
           fail-on-severity: high
 
+  backend:
+    name: Deploy database and Edge Function
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, e2e, database, security]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The secrets live in the "production" environment, which only main can deploy to.
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: wiaeagcvnyzbcxxshmhk
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
+        with:
+          version: 3.2.0
+      - run: supabase link --project-ref "$PROJECT_REF"
+      # Only migrations the project has not seen yet are applied, in order.
+      - name: Apply new migrations
+        run: supabase db push --remote --password "$SUPABASE_DB_PASSWORD" --yes
+      # Project settings the app needs, set from here so nobody has to click them in the
+      # dashboard: the "online" schema in the Data API, and sign-in without an account.
+      - name: Project settings
+        run: |
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF"
+          auth=(-H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json")
+          curl -sS --fail-with-body -X PATCH "$api/postgrest" "${auth[@]}" \
+            -d '{"db_schema":"public,graphql_public,online"}'
+          curl -sS --fail-with-body -X PATCH "$api/config/auth" "${auth[@]}" \
+            -d '{"external_anonymous_users_enabled":true}'
+      - name: Bundle the Edge Function
+        run: npm run build:functions
+      - name: Deploy the Edge Function
+        run: supabase functions deploy room-action --use-api --yes
+
   deploy:
     name: Deploy to GitHub Pages
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [quality, e2e, database, security]
+    # The site goes out after the server, so the new app never talks to an old server.
+    needs: [quality, e2e, database, security, backend]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
