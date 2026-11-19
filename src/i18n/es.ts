@@ -211,6 +211,7 @@ export const es = {
     noTurns: "Todavía no hay turnos.",
     logBanked: (n: string, pts: string, total: string) => `${n} se plantó con ${pts} → ${total}`,
     logOvershot: (n: string, pts: string) => `${n} se pasó y perdió ${pts}`,
+    logSkipped: (n: string) => `${n} no jugó su turno`,
     logBust: (n: string, pts: string | null) => `${n} sacó sancocho${pts ? ` y perdió ${pts}` : ""}`,
     roundShort: (n: number) => `R${n}`,
 

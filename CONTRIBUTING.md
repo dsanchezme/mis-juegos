@@ -36,12 +36,13 @@ Beyond what the linter enforces:
 
 ## Tests
 
-| Layer         | Tool                   | Where                                | What belongs there                                                           |
-| ------------- | ---------------------- | ------------------------------------ | ---------------------------------------------------------------------------- |
-| Unit          | Vitest                 | `src/**/*.test.ts(x)`                | Game rules, scoring, engine helpers. Fast, many, exhaustive on edge cases.   |
-| End-to-end    | Playwright (Pixel 7)   | `e2e/*.spec.ts`                      | A few critical journeys on the production build: start a game, roll, resume. |
-| Accessibility | axe-core in Playwright | `e2e/hub.spec.ts`                    | No serious or critical WCAG violations on key screens.                       |
-| Database      | pgTAP (Supabase CLI)   | `supabase/tests/database/*.test.sql` | Row level security and every SQL function: who may read or change what.      |
+| Layer         | Tool                    | Where                                | What belongs there                                                           |
+| ------------- | ----------------------- | ------------------------------------ | ---------------------------------------------------------------------------- |
+| Unit          | Vitest                  | `src/**/*.test.ts(x)`                | Game rules, scoring, engine helpers. Fast, many, exhaustive on edge cases.   |
+| End-to-end    | Playwright (Pixel 7)    | `e2e/*.spec.ts`                      | A few critical journeys on the production build: start a game, roll, resume. |
+| Accessibility | axe-core in Playwright  | `e2e/hub.spec.ts`                    | No serious or critical WCAG violations on key screens.                       |
+| Database      | pgTAP (Supabase CLI)    | `supabase/tests/database/*.test.sql` | Row level security and every SQL function: who may read or change what.      |
+| Online        | Vitest + local Supabase | `supabase/tests/functions/*.test.ts` | Phones playing through the real Edge Function: auth, turns, races.           |
 
 Rules:
 

@@ -14,6 +14,8 @@ export interface AmbiciosoPlayer extends Person {
   turns: number;
   bestTurn: number;
   busts: number;
+  /** Taken out of an online game: keeps their points but no longer plays or wins. */
+  removed?: boolean;
 }
 
 export interface Roll {
@@ -30,7 +32,7 @@ export type Phase = "handOff" | "rolled" | "busted" | "winner" | "ended";
 export interface TurnEvent {
   round: number;
   playerId: string;
-  type: "banked" | "bust" | "overshot";
+  type: "banked" | "bust" | "overshot" | "skipped";
   points: number; // points banked, or points lost
   total: number;
 }
@@ -60,8 +62,15 @@ export interface AmbiciosoState {
 }
 
 export type AmbiciosoAction =
-  /** `faces` is only used by tests to force a result. */
-  { type: "ROLL"; faces?: number[] } | { type: "BANK" } | { type: "PASS_TURN" } | { type: "END" };
+  /** `faces` forces the result: used by tests and by the online server, which rolls the dice itself. */
+  | { type: "ROLL"; faces?: number[] }
+  | { type: "BANK" }
+  | { type: "PASS_TURN" }
+  /** Online: the player in turn is not playing; the turn ends with no points. */
+  | { type: "SKIP_TURN" }
+  /** Online: a player leaves the game for good. */
+  | { type: "REMOVE_PLAYER"; playerId: string }
+  | { type: "END" };
 
 export const DICE_COUNT = 4;
 
@@ -92,15 +101,26 @@ export function reachesTarget(points: number, config: AmbiciosoConfig): boolean 
   return config.targetMode === "exact" ? points === config.target : points >= config.target;
 }
 
-/** Players with the highest score (there may be a tie). */
+/** Players still in the game with the highest score (there may be a tie). */
 export function leaders(players: AmbiciosoPlayer[]): string[] {
-  const max = Math.max(...players.map((j) => j.points));
-  return players.filter((j) => j.points === max).map((j) => j.id);
+  const active = players.filter((j) => !j.removed);
+  const max = Math.max(...active.map((j) => j.points));
+  return active.filter((j) => j.points === max).map((j) => j.id);
+}
+
+/** Next player still in the game, and whether reaching them starts a new round. */
+function nextActive(e: AmbiciosoState): { next: number; closesRound: boolean } {
+  let next = e.turnIndex;
+  let closesRound = false;
+  do {
+    next = (next + 1) % e.players.length;
+    if (next === 0) closesRound = true;
+  } while (e.players[next].removed);
+  return { next, closesRound };
 }
 
 function advanceTurn(e: AmbiciosoState): AmbiciosoState {
-  const next = (e.turnIndex + 1) % e.players.length;
-  const closesRound = next === 0;
+  const { next, closesRound } = nextActive(e);
   if (closesRound && e.finalRound) {
     return { ...e, phase: "winner", winners: leaders(e.players), turnTotal: 0 };
   }
@@ -199,6 +219,33 @@ export function apply(e: AmbiciosoState, action: AmbiciosoAction): AmbiciosoStat
     case "PASS_TURN": {
       if (e.phase !== "busted") return e;
       return advanceTurn(e);
+    }
+
+    case "SKIP_TURN": {
+      if (e.phase !== "handOff" && e.phase !== "rolled" && e.phase !== "busted") return e;
+      if (e.phase === "busted") return advanceTurn(e);
+      return advanceTurn({
+        ...e,
+        players: updateCurrentPlayer(e, (j) => ({ ...j, turns: j.turns + 1 })),
+        history: [
+          ...e.history,
+          { round: e.round, playerId: player.id, type: "skipped", points: e.turnTotal, total: player.points },
+        ],
+      });
+    }
+
+    case "REMOVE_PLAYER": {
+      if (e.phase === "winner" || e.phase === "ended") return e;
+      const index = e.players.findIndex((j) => j.id === action.playerId);
+      if (index < 0 || e.players[index].removed) return e;
+      const players = e.players.map((j, i) => (i === index ? { ...j, removed: true } : j));
+      const removed = { ...e, players };
+      // With a single player left there is nobody to play against: they win.
+      if (players.filter((j) => !j.removed).length < 2) {
+        return { ...removed, phase: "winner", winners: leaders(players), turnTotal: 0 };
+      }
+      // Their turn ends on the spot, without a history entry: they are gone.
+      return index === e.turnIndex ? advanceTurn(removed) : removed;
     }
 
     case "END":

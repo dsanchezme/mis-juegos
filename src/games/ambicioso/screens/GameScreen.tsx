@@ -175,6 +175,7 @@ function eventText(e: AmbiciosoState, ev: TurnEvent, t: Texts) {
   const name = e.players.find((x) => x.id === ev.playerId)?.name ?? "";
   if (ev.type === "banked") return t.ambicioso.logBanked(name, fmt(ev.points), fmt(ev.total));
   if (ev.type === "overshot") return t.ambicioso.logOvershot(name, fmt(ev.points));
+  if (ev.type === "skipped") return t.ambicioso.logSkipped(name);
   return t.ambicioso.logBust(name, ev.points ? fmt(ev.points) : null);
 }
 

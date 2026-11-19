@@ -8,3 +8,4 @@ test-results
 .env
 .env.*
 !.env.example
+supabase/functions/*/core.js
