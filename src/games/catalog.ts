@@ -1,7 +1,8 @@
 import type { ComponentType } from "react";
 import { fmt } from "../i18n";
 import type { Texts } from "../i18n/es";
-import { AmbiciosoGame, ambiciosoSummary } from "./ambicioso/screens/AmbiciosoGame";
+import { AmbiciosoEntry } from "./ambicioso/screens/AmbiciosoEntry";
+import { ambiciosoSummary } from "./ambicioso/screens/AmbiciosoGame";
 
 /** A game listed in the hub. Add new games here. */
 export interface CatalogEntry {
@@ -23,7 +24,7 @@ export const CATALOG: CatalogEntry[] = [
     name: (t) => t.ambicioso.name,
     description: (t) => t.ambicioso.tagline,
     faces: [1, 5],
-    Component: AmbiciosoGame,
+    Component: AmbiciosoEntry,
     gameSummary: ambiciosoSummary,
     describeGame: (info, t) =>
       t.ambicioso.historyDetail(!!info.exact, fmt(Number(info.target)), !!info.complete, Number(info.rounds)),

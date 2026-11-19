@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:online": "playwright test --config playwright.online.config.ts",
     "build:functions": "rolldown src/online/handler.ts --format esm --platform neutral --file supabase/functions/room-action/core.js",
     "db:start": "npm run build:functions && supabase start",
     "db:stop": "supabase stop",
@@ -36,6 +37,7 @@
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@fontsource/figtree": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
+    "@supabase/supabase-js": "2.119.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

@@ -37,7 +37,7 @@ The first time you run e2e tests locally, install the browser with `npx playwrig
 
 ## Online play (in development)
 
-Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in and Realtime). The app does not use it yet; the design is in the project's design notes. Everything is defined in `supabase/` and runs locally in Docker, so you never create tables by hand in the cloud.
+Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in and Realtime). Online mode only appears when the app is built with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; without them (as on GitHub Pages today) the app is exactly the single-phone one. The SDK is loaded only when someone opens online mode. So far you can create a room, join it by code or link, set it up and start; the online game screen comes next. Everything is defined in `supabase/` and runs locally in Docker, so you never create tables by hand in the cloud.
 
 | Command                   | What it does                                                                                 |
 | ------------------------- | -------------------------------------------------------------------------------------------- |
@@ -46,6 +46,7 @@ Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in a
 | `npm run db:test`         | Database tests (pgTAP) in `supabase/tests/database`                                          |
 | `npm run db:lint`         | Lint the SQL in the `online` schema                                                          |
 | `npm run test:online`     | Play through the Edge Function as several phones (needs `db:start`)                          |
+| `npm run test:e2e:online` | Several phones (browsers) in one room against the local stack (needs `db:start`)             |
 | `npm run build:functions` | Re-bundle `src/online/` into the Edge Function after changing it                             |
 | `npm run db:stop`         | Stop the local stack                                                                         |
 

@@ -1,4 +1,5 @@
 -- Saving moves from the Edge Function. Run with `npm run db:test`.
+-- Queries are scoped to the test room so they pass on a database that already has rooms.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(11);
@@ -36,9 +37,9 @@ select is(
     '{"type":"ROLL"}', 'playing', '{"turn":1}', '{}', false),
   6, 'a move bumps the version'
 );
-select is((select state from online.rooms), '{"turn":1}'::jsonb, 'and saves the new state');
+select is((select state from online.rooms where id = '11111111-1111-4111-8111-111111111111'), '{"turn":1}'::jsonb, 'and saves the new state');
 select results_eq(
-  $$select version, action from online.room_actions$$,
+  $$select version, action from online.room_actions where room_id = '11111111-1111-4111-8111-111111111111'$$,
   $$values (6, '{"type":"ROLL"}'::jsonb)$$,
   'and logs the move'
 );
@@ -47,21 +48,21 @@ select throws_ok(
     '{"type":"ROLL"}', 'playing', '{"turn":2}', '{}', false)$$,
   '40001', 'stale_version', 'a move based on an old version is refused'
 );
-select is((select state from online.rooms), '{"turn":1}'::jsonb, '... and changes nothing');
+select is((select state from online.rooms where id = '11111111-1111-4111-8111-111111111111'), '{"turn":1}'::jsonb, '... and changes nothing');
 
 select online.commit_action('11111111-1111-4111-8111-111111111111', 6, 'a0000000-0000-4000-8000-000000000001',
   '{"type":"REMOVE_PLAYER","seat":2}', 'finished', '{"turn":3}', '{2}', false);
 select results_eq(
-  $$select seat::int, removed from online.room_seats order by seat$$,
+  $$select seat::int, removed from online.room_seats where room_id = '11111111-1111-4111-8111-111111111111' order by seat$$,
   $$values (0, false), (1, false), (2, true)$$,
   'removed players are marked, not deleted, during the game'
 );
-select is((select status::text from online.rooms), 'finished', 'the status follows the game');
+select is((select status::text from online.rooms where id = '11111111-1111-4111-8111-111111111111'), 'finished', 'the status follows the game');
 
 select online.commit_action('11111111-1111-4111-8111-111111111111', 7, 'a0000000-0000-4000-8000-000000000001',
   '{"type":"REMATCH"}', 'lobby', '{"turn":3}', '{}', true);
 select results_eq(
-  $$select seat::int from online.room_seats order by seat$$,
+  $$select seat::int from online.room_seats where room_id = '11111111-1111-4111-8111-111111111111' order by seat$$,
   $$values (0), (1)$$,
   'a rematch clears removed players'
 );
@@ -69,7 +70,7 @@ select is(
   (select role::text from online.room_members where user_id = 'c0000000-0000-4000-8000-000000000003'),
   'player', 'and lets spectators play'
 );
-select is((select version from online.rooms), 8, 'every move is one version');
+select is((select version from online.rooms where id = '11111111-1111-4111-8111-111111111111'), 8, 'every move is one version');
 
 select * from finish();
 rollback;
