@@ -35,9 +35,9 @@ npm run dev          # http://localhost:5173/mis-juegos/
 
 The first time you run e2e tests locally, install the browser with `npx playwright install chromium`.
 
-## Online play (in development)
+## Online play
 
-Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in and Realtime). Online mode only appears when the app is built with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; without them (as on GitHub Pages today) the app is exactly the single-phone one. The SDK is loaded only when someone opens online mode. You can create a room, join it by code or link, set it up and play live: everyone sees each roll as it happens, players on the same phone pass it around, and people watching can send emoji reactions (over Realtime Broadcast, never stored). A turn nobody plays can be skipped after a minute, the host can take a player out, players can leave mid-game, the host starts rematches (spectators join them), finished games go into each phone's history marked as online, and rooms unused for 24 hours are deleted every hour by `pg_cron`. Everything is defined in `supabase/` and runs locally in Docker, so you never create tables by hand in the cloud.
+Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in and Realtime). Online mode only appears when the app is built with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; without them (as in local development and the regular e2e tests) the app is exactly the single-phone one. The GitHub Pages build points to the production project. The SDK is loaded only when someone opens online mode. You can create a room, join it by code or link, set it up and play live: everyone sees each roll as it happens, players on the same phone pass it around, and people watching can send emoji reactions (over Realtime Broadcast, never stored). A turn nobody plays can be skipped after a minute, the host can take a player out, players can leave mid-game, the host starts rematches (spectators join them), finished games go into each phone's history marked as online, and rooms unused for 24 hours are deleted every hour by `pg_cron`. Everything is defined in `supabase/` and runs locally in Docker, so you never create tables by hand in the cloud.
 
 | Command                   | What it does                                                                                 |
 | ------------------------- | -------------------------------------------------------------------------------------------- |
@@ -59,6 +59,19 @@ supabase/
   tests/database/     pgTAP tests: row level security, lobby rules, saving moves
   tests/functions/    online tests: real sign-ins, SQL functions and the Edge Function together
 ```
+
+### Production
+
+One free Supabase project (`wiaeagcvnyzbcxxshmhk`). Nothing is created by hand: on every merge to `main`, after all checks pass, CI
+
+1. applies the new migrations (`supabase db push`),
+2. sets the project settings the app needs through the Management API (the `online` schema in the Data API, anonymous sign-in),
+3. deploys the `room-action` Edge Function,
+4. and only then publishes the site to GitHub Pages, so a new app never talks to an old server.
+
+It needs two secrets in the `production` environment on GitHub (Settings → Environments), limited to the `main` branch: `SUPABASE_ACCESS_TOKEN` (a personal access token from supabase.com) and `SUPABASE_DB_PASSWORD`. The project's URL and publishable key are public by design and live in `ci.yml`.
+
+The `Keep alive` workflow reads the migration history from production twice a week, so the free project is never paused for being idle. Rooms are deleted a day after their last use and each phone keeps its own history, so there is nothing worth backing up.
 
 How it is secured:
 
