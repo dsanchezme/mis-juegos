@@ -35,6 +35,31 @@ npm run dev          # http://localhost:5173/mis-juegos/
 
 The first time you run e2e tests locally, install the browser with `npx playwright install chromium`.
 
+## Online play (in development)
+
+Online rooms use [Supabase](https://supabase.com) (Postgres, anonymous sign-in and Realtime). Nothing in the app uses it yet; the design is in the project's design notes. Everything is defined in `supabase/` and runs locally in Docker, so you never create tables by hand in the cloud.
+
+| Command            | What it does                                                       |
+| ------------------ | ------------------------------------------------------------------ |
+| `npm run db:start` | Start the local Supabase stack (needs Docker) and apply migrations |
+| `npm run db:reset` | Recreate the local database from `supabase/migrations`             |
+| `npm run db:test`  | Database tests (pgTAP) in `supabase/tests/database`                |
+| `npm run db:lint`  | Lint the SQL in the `online` schema                                |
+| `npm run db:stop`  | Stop the local stack                                               |
+
+```
+supabase/
+  config.toml         local stack settings (anonymous sign-in on, `online` schema exposed)
+  migrations/         schema changes, applied in order; never edit one that is merged
+  tests/database/     pgTAP tests: row level security and lobby rules
+```
+
+How it is secured:
+
+- All tables live in the `online` schema with row level security. Players can only **read** rooms they belong to.
+- Clients never write tables directly. Lobby changes go through SQL functions (`create_room`, `join_room`, `add_seat`, `remove_seat`, `update_config`, `leave_room`) that check who is calling. Game moves will go through an Edge Function that rolls the dice, so no phone can predict or fake a roll.
+- A phone (`room_members`) can control several players (`room_seats`), for pass-and-play inside an online room.
+
 ## Project structure
 
 ```
@@ -71,8 +96,8 @@ All user-facing text lives in `src/i18n/es.ts` and `src/i18n/en.ts`; components 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow. In short:
 
 - Every change goes through a pull request. CI must be green before merging.
-- **CI** (`.github/workflows/ci.yml`) runs lint, type check, unit tests with a coverage threshold, the production build, end-to-end tests on a mobile viewport (including an accessibility scan), and a dependency audit.
+- **CI** (`.github/workflows/ci.yml`) runs lint, type check, unit tests with a coverage threshold, the production build, end-to-end tests on a mobile viewport (including an accessibility scan), database migrations and security tests against a local Supabase, and a dependency audit.
 - **CD**: every merge to `main` re-runs CI and, only if every job passes, deploys to GitHub Pages.
 - **Security**: CodeQL code scanning, Dependabot updates, dependency review on PRs, actions pinned to commit SHAs, and least-privilege workflow permissions. See [SECURITY.md](SECURITY.md).
 
-Everything is stored on the device (games, players, history). There is no server or database, so hosting is free.
+Single-phone games store everything on the device (games, players, history) and need no server. Online play will use the free Supabase plan, so hosting stays free.
